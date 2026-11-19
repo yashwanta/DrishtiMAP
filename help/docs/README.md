@@ -29,7 +29,7 @@ DRISHTI Map finds out why a laser map makes robots jump or lose their position, 
 | Let the AI model do the steps | [[WI-08]] |
 | What does this symptom mean? | [[KB-02]] |
 | What do the numbers mean? | [[KB-04]] |
-| How was the Springfield map fixed? | [[KB-03]] |
+| How was the reference map fixed? | [[KB-03]] |
 | See what the LiDAR measures, and at what height | [[KB-09]] |
 
 ## The method in six lines

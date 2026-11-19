@@ -137,9 +137,9 @@ workspace\
 
 Click the workspace path at the top to switch folder. `DrishtiMap.exe` uses a `workspace` folder next to itself if there is one.
 
-## The method (what the Springfield case taught)
+## The method (what the reference case taught)
 
-1. Replay a recording through the map. The live Springfield map steps 1.36 m at LM520: the jump seen on the floor.
+1. Replay a recording through the map. The live map of the reference plant steps 1.36 m at LM520: the jump seen on the floor.
 2. *Find rigid pieces* shows the east loop is one rigid piece (73 m, 0.09 m rms) turned about 2° against the west.
 3. *Measure turn* gives the correction (2.07° ± 0.17° here; the v5 that ran on AMR-03 used 2.19°).
 4. *Build → move a region* moves the whole piece with its stations, paths, lines and bins; the check list must be all PASS.
@@ -155,17 +155,17 @@ Moving only part of a misplaced piece just moves the jump (that is what the earl
 - Where the robot was relocalised during a recording, the laser track restarts; the step there is marked and not counted as a map fault.
 - Checks cover geometry and properties. They do not replace a physical check of docking positions.
 - **Fits as one rigid track** is only fair on a drive without long stops, up to about 120 m. On a long stop-and-go drive the laser track itself drifts; Detect then reports a warning, not a fault, when the replay shows no step.
-- A misplaced piece of map cannot be seen in the map file alone; it needs a recording. A map-only double-wall detector was tried and removed: it could not tell the Springfield live map from the fixed one.
+- A misplaced piece of map cannot be seen in the map file alone; it needs a recording. A map-only double-wall detector was tried and removed: it could not tell the faulty live map from the fixed one.
 - Adding a feature line by hand is not offered (the side flag of a line could not be derived safely from the files). Take lines from another map, or draw them in RoboShop.
 - Stations and paths added in the Edit tab exist only in the map file; the fleet scene needs them too. Added objects have not been loaded in RoboShop yet.
-- Tested with SEER maps from one site (Springfield). Other map generations may carry fields this version has not seen; unknown fields are always written back unchanged.
+- Tested with SEER maps from one site. Other map generations may carry fields this version has not seen; unknown fields are always written back unchanged.
 
 ## Build and test
 
 ```
 build.cmd                      builds DrishtiMap.exe (needs Go)
-go test ./...                  unit tests; the Springfield regression tests run when these are set:
-  set DRISHTI_WS=<workspace>   (maps\ and drives\ of the Springfield case)
+go test ./...                  unit tests; the reference-case regression tests run when these are set:
+  set DRISHTI_WS=<workspace>   (maps\ and drives\ of the reference case)
   set DRISHTI_REF=<folder with moved.smap, final.smap, T.json from the original scripts>
   set DRISHTI_OUT=<folder with d6_poses.txt from the original analysis>
 DrishtiMap.exe --no-window --port 47811      server only; prints the address

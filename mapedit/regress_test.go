@@ -11,7 +11,7 @@ import (
 	"drishtimap/smap"
 )
 
-// These tests replay the Springfield v5 build and must give the same numbers as the original
+// These tests replay the reference v5 build and must give the same numbers as the original
 // scripts that produced the map trialled on AMR-03. They need the reference files:
 //
 //	DRISHTI_WS  = workspace folder (maps\...)

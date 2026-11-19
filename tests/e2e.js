@@ -1,5 +1,5 @@
 // End-to-end test of a running DRISHTI Map server:  node tests/e2e.js <url-with-token> [step ...]
-// Runs the real tools on the workspace's Springfield data and checks the known results.
+// Runs the real tools on the workspace's reference data and checks the known results.
 const url = new URL(process.argv[2]);
 const only = process.argv.slice(3);
 const base = url.origin, token = url.searchParams.get('t');

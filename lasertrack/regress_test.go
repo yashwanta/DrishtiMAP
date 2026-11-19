@@ -12,7 +12,7 @@ import (
 	"drishtimap/smap"
 )
 
-// Reference results come from the original analysis of the Springfield AMR-06 loop:
+// Reference results come from the original analysis of the reference AMR-06 loop:
 //
 //	DRISHTI_WS   workspace (maps\, drives\)
 //	DRISHTI_OUT  folder with d6_poses.txt, replay_cur1113.txt, replay_v3_orig.txt, final_tracking.txt, T.json values

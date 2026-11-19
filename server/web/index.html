@@ -86,7 +86,7 @@
       <input id="scanSl" type="range" min="1" max="1" value="1">
       <div class="row"><select id="scanRobot"></select><button id="scanLive" title="Reads the robot's position and scan once a second (read-only)">Live from robot</button><button id="scanOff" title="Remove the scan from the map">Hide</button></div>
       <div id="scanInfo"></div>
-      <p class="ex"><b>Example:</b> type <code>120</code> and press <b>Show sample</b> to see what the scanners saw at sample 120; press ▶ to step along the drive. Or choose <code>AMR-03</code> and press <b>Live from robot</b>. Springfield scanners sit 0.194 m (front) and 0.197 m (rear) above the floor, so anything lower is not seen.</p>
+      <p class="ex"><b>Example:</b> type <code>120</code> and press <b>Show sample</b> to see what the scanners saw at sample 120; press ▶ to step along the drive. Or choose <code>AMR-03</code> and press <b>Live from robot</b>. The reference plant's scanners sit 0.194 m (front) and 0.197 m (rear) above the floor, so anything lower is not seen.</p>
 
       <h4>2 · Test a map with the recording</h4>
       <p>Lays the recorded lasers on <b>Map</b>. A step of 0.5 m or more is where a robot jumps. Works for maps never loaded on a robot.</p>
@@ -112,7 +112,7 @@
         <label class="row">th (rad) <input id="th" type="number" step="any"> tx <input id="tx" type="number" step="any"> ty <input id="ty" type="number" step="any"></label>
         <label>Region <input id="region" placeholder="draw it on the map, or x,y x,y x,y …"></label>
         <label>Anchor map (walls that must stay) <select id="selAnchor"></select></label>
-        <p class="ex"><b>Example:</b> after Measure turn, press <b>Region</b> above the map, click corners around the whole misplaced piece (Springfield: the east loop), double-click to finish, then press Build. Walls, stations and paths inside move together.</p>
+        <p class="ex"><b>Example:</b> after Measure turn, press <b>Region</b> above the map, click corners around the whole misplaced piece (in the reference case: the east loop), double-click to finish, then press Build. Walls, stations and paths inside move together.</p>
         <button data-run="build_move_region">Build</button></fieldset>
       <fieldset><legend>Take walls in a box from Second map</legend>
         <label>Box <input id="box" placeholder="draw it, or x0,y0,x1,y1"></label>
