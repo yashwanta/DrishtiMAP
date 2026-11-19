@@ -3,6 +3,19 @@
 Desktop tool for finding and fixing AMR laser-map faults (SEER / RoboShop `.smap`), with an optional AI assistant.
 One file, no installer: **`DrishtiMap.exe`** (Windows 10/11, uses the WebView2 runtime that ships with Windows 11).
 
+## Download and run
+
+1. Go to **[Releases](https://github.com/yashwanta/DrishtiMAP/releases/latest)** and download `DRISHTI-Map-<version>.zip`.
+2. Unzip it and double-click **`DrishtiMap.exe`**. There is nothing to install.
+3. Windows may show "Windows protected your PC" because the file is not signed. Choose **More info**, then **Run anyway**.
+4. The Help page "Start here" opens. Follow WI-00 from there.
+
+Needs Windows 10 or 11 (64-bit) and the Microsoft Edge WebView2 Runtime (included in Windows 11). Without it the
+program opens in the web browser instead. The download has no maps or recordings: import your own `.smap` map
+and, to find jumps, a recording of a robot driving through the trouble spot.
+
+This repository holds the released program only. The source code is not published.
+
 ## What it is
 
 An autonomous mobile robot (AMR) finds its position by matching what its laser scanners see against a map of the
@@ -105,7 +118,7 @@ The **Assistant** tab is the same tools driven by an AI model in plain language.
 
 ## Rules built into the program
 
-- **Read-only on robots.** The only requests it can send are: robot information (1000), position (1004), laser scan (1009), map list (1300) and map download (4011). There is no code that loads a map, changes a parameter, relocalises or moves a robot. A test (`seer/seer_test.go`) fails if a write request is ever added. The list is shown in Settings.
+- **Read-only on robots.** The only requests it can send are: robot information (1000), position (1004), laser scan (1009), map list (1300) and map download (4011). There is no code that loads a map, changes a parameter, relocalises or moves a robot. The list is shown in Settings.
 - **Candidates are files, not deployments.** A candidate is written to `candidates\` and never replaces a source map or an existing candidate. A person loads it in RoboShop, on one test robot first.
 - **The AI model sees summaries only.** It receives the text result of each tool (what you see in the Output panel), never the map or laser files. With a local model (Ollama, LM Studio) nothing leaves the PC.
 - **API keys** are stored encrypted with Windows DPAPI for the current Windows user (`%APPDATA%\DRISHTI Map\config.json`).
@@ -159,19 +172,3 @@ Moving only part of a misplaced piece just moves the jump (that is what the earl
 - Adding a feature line by hand is not offered (the side flag of a line could not be derived safely from the files). Take lines from another map, or draw them in RoboShop.
 - Stations and paths added in the Edit tab exist only in the map file; the fleet scene needs them too. Added objects have not been loaded in RoboShop yet.
 - Tested with SEER maps from one site. Other map generations may carry fields this version has not seen; unknown fields are always written back unchanged.
-
-## Build and test
-
-```
-build.cmd                      builds DrishtiMap.exe (needs Go)
-go test ./...                  unit tests; the reference-case regression tests run when these are set:
-  set DRISHTI_WS=<workspace>   (maps\ and drives\ of the reference case)
-  set DRISHTI_REF=<folder with moved.smap, final.smap, T.json from the original scripts>
-  set DRISHTI_OUT=<folder with d6_poses.txt from the original analysis>
-DrishtiMap.exe --no-window --port 47811      server only; prints the address
-node tests\e2e.js <address>                  every tool end to end on the workspace
-node tests\e2e_edit.js <address>             detect, hand edits, help and fleet check end to end
-node tests\ui.js <address> shot.png "map=NAME&drive=NAME&run=replay"   opens the page in headless Edge
-```
-
-Source layout: `smap` (map file reader/writer that keeps every field), `mapedit` (build, check, compare), `lasertrack` (laser track, replay, fits), `seer` (read-only robot client), `app` (workspace, tools), `help` (work instructions and knowledge base, Markdown in `help\docs`), `ai` (model connections), `server` (window back end + `web` front end).
