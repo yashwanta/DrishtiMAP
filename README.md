@@ -3,7 +3,86 @@
 Desktop tool for finding and fixing AMR laser-map faults (SEER / RoboShop `.smap`), with an optional AI assistant.
 One file, no installer: **`DrishtiMap.exe`** (Windows 10/11, uses the WebView2 runtime that ships with Windows 11).
 
-## What it does
+## What it is
+
+An autonomous mobile robot (AMR) finds its position by matching what its laser scanners see against a map of the
+walls. When part of that map is wrong, the robot's confidence drops, its position jumps, and it stops or
+relocalises in the middle of a route. On the floor this looks like "the robot got lost at LM443 again".
+
+The hard part is that a wrong map usually looks fine. Opening it in the map editor shows walls, stations and paths
+where you expect them. The error only shows when a real robot drives through it.
+
+DRISHTI Map answers three questions, in order:
+
+1. **Where and why does this map make robots lose position?**
+2. **What is the smallest change that corrects it?**
+3. **Is the corrected file safe, before any robot sees it?**
+
+It does this from two things you already have: the map file, and a short recording of a robot driving through the
+trouble spot. It never changes a robot. Its output is a new map file and a report, which a person loads on one
+test robot.
+
+## What you can accomplish with it
+
+**Find the real cause of a localisation problem, not just the spot where it shows.**
+Replay a recorded drive through the map and the app marks every place the map would make a robot jump (a step of
+0.5 m or more) and every stretch where the walls match the lasers poorly. It then finds which part of the map is
+one rigid, correct piece and where that piece is attached wrongly to the rest. A jump shows at a seam; the cause is
+the whole piece behind it.
+
+**Measure the correction instead of guessing it.**
+The app measures the turn and shift of the misplaced piece from the laser data, three times, and reports the value
+with its spread. No trial-and-error shifting of walls.
+
+**Build a corrected map that keeps everything consistent.**
+A region moves as one unit: wall points, reflection points, reflectors, feature lines, stations, paths and bins
+together. Stations stay at the same physical place on the floor because their walls move with them. Everything
+outside the region stays byte-for-byte as it was.
+
+**Prove a map before a trial.**
+Any map file, including one that has never been on a robot, can be tested against a recording. A candidate also
+goes through a check list: same stations, paths, bins and areas as the base; path lengths kept; no path or station
+closer to a wall than before; no feature line lying on a path. You go to the floor with evidence, not hope.
+
+**Make small map repairs by hand, safely.**
+Delete a feature line that raises a virtual-laser fault, erase or move walls, take walls from another map, change
+a path's direction or speed, move a station. Each save is a new checked file; the source map is never overwritten.
+
+**See what every robot is actually running.**
+One click reads the current map and its checksum from every robot and flags the ones that differ. Map names say
+nothing about content: two different maps can carry the same name.
+
+**Look at the raw LiDAR data.**
+Step through a recording one scan at a time, or read a live scan from a robot, with each scanner in its own colour
+and the height of its scan plane. Useful for telling a map problem from a sensor or environment problem.
+
+**Record evidence from a robot.**
+Position, confidence and laser scans every 0.7 seconds during a drive, read-only, for analysis here or for keeping
+as a before/after record.
+
+**Work in plain language.**
+Connect an AI model (Claude, any OpenAI-compatible server, or a local model) and ask "why does AMR-03 jump near
+LM520?". The assistant runs the same tools and explains the result. Every tool also works without a model.
+
+**Train people on the method.**
+The Help window holds 9 work instructions and 9 knowledge-base articles: how a robot uses a map, what each symptom
+usually means, how to read the numbers, and a full worked case.
+
+## Who it is for
+
+- **Controls and AMR engineers** who have to fix a map and want to know the change is right before a trial.
+- **Maintenance and floor support** who need to tell a map fault from a robot or sensor fault.
+- **Site leads** who need to know whether the whole fleet is on the same map.
+
+## What it replaced
+
+In the case this app was built from, robots jumped about 1.4 m in one corridor. Three hand-made map patches each
+passed their file checks and each failed on the floor: every one moved the jump to a different station. The laser
+recordings showed why. A 73 m loop of the map was drawn correctly but attached about 2 degrees turned, which is
+almost nothing at one end and 1.5 m at the other. Turning the whole loop back as one piece removed the jump on the
+first trial. The app turns that method into buttons, so the next case takes hours instead of days.
+
+## Every tool
 
 | Step | Button (Tools tab) | What you get |
 |---|---|---|
@@ -11,7 +90,7 @@ One file, no installer: **`DrishtiMap.exe`** (Windows 10/11, uses the WebView2 r
 | Are all robots on the same map | **Check maps on all robots** (left panel) | each robot's current map and checksum, the ones that differ flagged; optional download |
 | Change a map by hand | **Edit** tab | delete feature lines, erase / move / take walls, set path direction or speed, move / add / delete stations and paths; saved as a checked candidate |
 | See the LiDAR data | **LiDAR · what each scanner sees** (Tools tab) | one scan at a time from a recording, or live from a robot; each scanner in its own colour with the height of its scan plane |
-| Learn the method | **Help** (top right) | 8 work instructions (WI) and 8 knowledge-base articles (KB), also readable by the assistant |
+| Learn the method | **Help** (top right) | 9 work instructions (WI) and 9 knowledge-base articles (KB), also readable by the assistant |
 | Record a drive | robot → **rec** | position, confidence and lasers every 0.7 s, read-only |
 | Copy the robot's map | robot → **map** | the map the robot is using now, into `maps\` |
 | What the robot reported | **Recording summary** | stations, confidence, jumps, abnormal localisation states |
