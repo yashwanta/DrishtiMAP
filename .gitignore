@@ -1,0 +1,16 @@
+# Site data: plant maps, recordings, robot addresses, results. Never commit.
+workspace/
+*.smap
+tests/reference/d6_poses.txt
+tests/reference/T.json
+tests/shots/
+
+# Build outputs and shipping packages
+*.exe
+release/
+*.zip
+
+# Local
+*.log
+shot*.png
+.claude/settings.local.json
