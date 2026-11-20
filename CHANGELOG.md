@@ -8,6 +8,11 @@ To publish a version: change `Version` in `app\app.go`, add a section at the top
 `## <version> · <date> · by <your GitHub name>`, commit, then push a tag `v<version>`. GitHub builds the
 exe and publishes the release by itself, with your name and the list of commits on the release page.
 
+## 1.6.3 · 2026-11-20 · by yashwanta
+
+- Evidence step: when **Fix options** cannot be pressed yet, the step says why (no laser evidence for
+  the box) and what to do. The nearest stored scan is now named correctly.
+
 ## 1.6.2 · 2026-11-20 · by yashwanta
 
 - Stored laser scans are asked for **without a sign-in first**. A sign-in is used only when the AMR

@@ -20,7 +20,7 @@ import (
 	"drishtimap/smap"
 )
 
-const Version = "1.6.2"
+const Version = "1.6.3"
 
 // Build details. The release build on GitHub fills them in (-ldflags -X); a build made on a PC
 // leaves them empty and the footer then says "local build".

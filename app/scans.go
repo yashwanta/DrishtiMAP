@@ -602,7 +602,11 @@ func init() {
 				fmt.Fprintf(&b, "  %s  %-8s %-15s confidence %.2f  at %s\n", w.When, w.Robot, w.Reason, w.Conf, w.Place)
 			}
 			total := len(all)
-			return &Result{Summary: b.String(), Data: map[string]any{"robots": rows, "total": len(list), "stored": total, "where": places, "nearest": nearestD}}, nil
+			nearestPlace := ""
+			if nearest >= 0 {
+				nearestPlace = fmt.Sprintf("%s at %s, %s", all[nearest].AMR, scanPlace(all[nearest]), all[nearest].CapturedAt.Local().Format("02 Jan 15:04"))
+			}
+			return &Result{Summary: b.String(), Data: map[string]any{"robots": rows, "total": len(list), "stored": total, "where": places, "nearest": nearestD, "nearestPlace": nearestPlace}}, nil
 		}})
 	reg(&Tool{Name: "scan_evidence", Heavy: true, Desc: "READ-ONLY: take the laser scans that AMR Health stored near a box, place each one on a map, and report: each robot's share of laser points on walls (a robot clearly below the others has a scanner problem), which walls of the map in the box were seen, and what the lasers see that the map does not have (in most scans = permanent, in few = passing through). Works without anyone recording. A single scan cannot show a position jump or a misplaced piece: that needs a recorded drive (box_evidence, replay).",
 		Params: obj(pMap+`,"box":{"type":"array","items":{"type":"number"},"minItems":4,"maxItems":4},"hours":{"type":"number","description":"how many hours back (default 48)"},"from":{"type":"string"},"to":{"type":"string"},"robots":{"type":"array","items":{"type":"string"},"description":"optional: only these robots"}`, "map", "box"),
