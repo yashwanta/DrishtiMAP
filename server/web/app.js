@@ -48,6 +48,7 @@ let toastT; const toast = t => { $('#coords').textContent = t; clearTimeout(toas
 async function refresh() {
   S.state = await api('/api/state');
   $('#wsBtn').textContent = 'Workspace: ' + S.state.workspace;
+  const bi = S.state.build || {}; $('#footVer').textContent = 'DRISHTI Map ' + S.state.version + (bi.date ? ' · released ' + bi.date + (bi.by ? ' by ' + bi.by : '') + (bi.commit ? ' · build ' + bi.commit : '') : ' · local build (not a release)');
   const r = await run('list_workspace', {}, true);
   S.ws = r.data;
   for (const k of ['maps', 'candidates', 'drives', 'robots']) S.ws[k] = S.ws[k] || [];
@@ -268,6 +269,8 @@ $('#histGo').onclick = async () => {
   } catch (e) { out('what happened — did not run', e.message); }
   finally { busy = false; $('#histGo').disabled = false; }
 };
+
+$('#footLog').onclick = async () => { try { out('what changed in each version', (await api('/api/changelog')).text.replace(/^# .*\n/, '').replace(/\*\*|`/g, '').trim()); } catch (e) { out('what changed', e.message); } };
 
 $('#settingsBtn').onclick = () => {
   const box = el('div'), rows = [];

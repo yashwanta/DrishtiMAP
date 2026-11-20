@@ -24,6 +24,13 @@ import (
 //go:embed build/icon.ico
 var iconICO []byte
 
+// The list of changes per version, shown from the footer ("What changed").
+//
+//go:embed CHANGELOG.md
+var changelog string
+
+func init() { app.Changelog = changelog }
+
 var (
 	user32      = syscall.NewLazyDLL("user32.dll")
 	procDPI     = user32.NewProc("SetProcessDpiAwarenessContext")

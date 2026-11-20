@@ -115,7 +115,10 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	switch p {
 	case "/api/state":
 		prov, active := a.ProvidersView()
-		jsonOut(w, map[string]any{"version": app.Version, "workspace": a.Cfg.Workspace, "providers": prov, "active": active, "tools": app.Tools, "robotRequests": seer.Allowed()})
+		jsonOut(w, map[string]any{"version": app.Version, "workspace": a.Cfg.Workspace, "providers": prov, "active": active, "tools": app.Tools, "robotRequests": seer.Allowed(),
+			"build": map[string]string{"commit": app.Commit, "date": app.BuildDate, "by": app.BuiltBy}})
+	case "/api/changelog":
+		jsonOut(w, map[string]string{"text": app.Changelog})
 	case "/api/run":
 		var q struct {
 			Tool string          `json:"tool"`

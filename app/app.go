@@ -20,7 +20,16 @@ import (
 	"drishtimap/smap"
 )
 
-const Version = "1.3.1"
+const Version = "1.3.2"
+
+// Build details. The release build on GitHub fills them in (-ldflags -X); a build made on a PC
+// leaves them empty and the footer then says "local build".
+var (
+	Commit    = "" // short commit the exe was built from
+	BuildDate = "" // yyyy-mm-dd
+	BuiltBy   = "" // GitHub login of the person who released this version
+	Changelog = "" // CHANGELOG.md, set by the main package
+)
 
 // Provider is one AI model connection.
 type Provider struct {
