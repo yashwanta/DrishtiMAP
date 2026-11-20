@@ -1,0 +1,84 @@
+# Builds DrishtiMap.exe and publishes it under Releases whenever a version tag (v1.3.1, ...) is pushed.
+# The build runs on GitHub's machine from the source in this repository: no site data is involved.
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Tag must match the version in the program
+        shell: pwsh
+        run: |
+          $v = "${{ github.ref_name }}".TrimStart('v')
+          if (-not (Select-String -Path app/app.go -SimpleMatch -Quiet -Pattern "const Version = `"$v`"")) {
+            throw "Tag ${{ github.ref_name }} does not match Version in app/app.go. Change the version first, then tag."
+          }
+          if (-not (Select-String -Path CHANGELOG.md -SimpleMatch -Quiet -Pattern "## $v")) {
+            throw "CHANGELOG.md has no section '## $v'. Write what changed first, then tag."
+          }
+          "VERSION=$v" >> $env:GITHUB_ENV
+
+      - name: Check and test
+        run: |
+          go vet ./...
+          go test ./...
+
+      - name: Build
+        shell: pwsh
+        run: |
+          $dir = "dist/DRISHTI-Map-$env:VERSION"
+          New-Item -ItemType Directory -Force $dir | Out-Null
+          go build -trimpath -ldflags "-s -w -H windowsgui" -o "$dir/DrishtiMap.exe" .
+          if ($LASTEXITCODE -ne 0) { throw "build failed" }
+          (Get-Content "packaging/READ ME FIRST.txt" -Raw).Replace('{VERSION}', $env:VERSION) | Set-Content "$dir/READ ME FIRST.txt" -NoNewline
+          Compress-Archive -Path "$dir/*" -DestinationPath "dist/DRISHTI-Map-$env:VERSION.zip"
+          Copy-Item "$dir/DrishtiMap.exe" "dist/DrishtiMap-$env:VERSION.exe"
+
+      - name: Release notes
+        shell: pwsh
+        run: |
+          $lines = Get-Content CHANGELOG.md
+          $start = ($lines | Select-String -SimpleMatch -Pattern "## $env:VERSION" | Select-Object -First 1).LineNumber
+          $body = @()
+          for ($i = $start; $i -lt $lines.Count; $i++) { if ($lines[$i] -like '## *') { break }; $body += $lines[$i] }
+          $zip = (Get-FileHash "dist/DRISHTI-Map-$env:VERSION.zip" -Algorithm SHA256).Hash.ToLower()
+          $exe = (Get-FileHash "dist/DrishtiMap-$env:VERSION.exe" -Algorithm SHA256).Hash.ToLower()
+          $notes = @(
+            "## What changed"
+            ($body -join "`n").Trim()
+            ""
+            "## Download and run"
+            ""
+            "1. Download **DRISHTI-Map-$env:VERSION.zip** below and unzip it (or take **DrishtiMap-$env:VERSION.exe** on its own)."
+            "2. Double-click ``DrishtiMap.exe``. There is nothing to install."
+            "3. Windows may show *Windows protected your PC* because the file is not signed. Choose **More info**, then **Run anyway**."
+            ""
+            "Needs Windows 10 or 11 (64-bit) and the Microsoft Edge WebView2 Runtime (included in Windows 11). The download has no maps or recordings."
+            ""
+            "| File | SHA-256 |"
+            "|---|---|"
+            "| DRISHTI-Map-$env:VERSION.zip | ``$zip`` |"
+            "| DrishtiMap-$env:VERSION.exe | ``$exe`` |"
+          ) -join "`n"
+          Set-Content notes.md $notes
+
+      - name: Publish
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${{ github.ref_name }}" "dist/DRISHTI-Map-$env:VERSION.zip" "dist/DrishtiMap-$env:VERSION.exe" --title "DRISHTI Map $env:VERSION" --notes-file notes.md --generate-notes --verify-tag
+          if ($LASTEXITCODE -ne 0) { throw "publishing the release failed" }

@@ -20,7 +20,7 @@ import (
 	"drishtimap/smap"
 )
 
-const Version = "1.3.0"
+const Version = "1.3.1"
 
 // Provider is one AI model connection.
 type Provider struct {

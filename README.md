@@ -3,6 +3,13 @@
 Desktop tool for finding and fixing AMR laser-map faults (SEER / RoboShop `.smap`), with an optional AI assistant.
 One file, no installer: **`DrishtiMap.exe`** (Windows 10/11, uses the WebView2 runtime that ships with Windows 11).
 
+## Download
+
+Get the latest `DrishtiMap.exe` from **[Releases](https://github.com/yashwanta/DrishtiMAP/releases/latest)**:
+download the zip, unzip it, double-click `DrishtiMap.exe`. Nothing to install. Windows may show
+"Windows protected your PC" because the file is not signed: choose **More info**, then **Run anyway**.
+What changed in each version is on the release page and in [CHANGELOG.md](CHANGELOG.md).
+
 ## What it is
 
 An autonomous mobile robot (AMR) finds its position by matching what its laser scanners see against a map of the

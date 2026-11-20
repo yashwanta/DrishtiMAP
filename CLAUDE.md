@@ -66,8 +66,11 @@ node tests\e2e_edit.js <address>            detect, hand edits, help, fleet chec
 node tests\ui.js <address> shot.png "map=NAME&drive=NAME&run=replay"    page test in headless Edge
 ```
 
-Release: bump `Version` in `app\app.go`, build, copy the exe and `READ ME FIRST.txt` to
-`release\DRISHTI-Map-<version>\`, zip it.
+Release (GitHub builds and publishes it, `.github\workflows\release.yml`): bump `Version` in `app\app.go`,
+add a `## <version>` section to `CHANGELOG.md` saying what changed in plain words, commit, push, then
+`git tag v<version>` and `git push origin v<version>`. The workflow refuses a tag that does not match the
+version or has no changelog section. The exe and zip appear under Releases a few minutes later.
+`packaging\READ ME FIRST.txt` goes into the zip. Do this for every change the team should get.
 
 ## Things that bite
 
@@ -111,6 +114,5 @@ github.com/yashwanta/DrishtiMAP is public and holds the source code so contribut
 - Local branch `main` tracks `origin/main`. Site data never goes there: `workspace\` (maps, recordings,
   robot addresses, `site.json` with the server login), `.smap` files, map screenshots, exes and `release\`
   are in `.gitignore`. Contributors get test data from the owner, outside GitHub.
-- A release = tag + `release\DRISHTI-Map-<version>.zip` uploaded by the user in the browser.
 - Never commit the company name, plant names, robot addresses, maps, recordings or screenshots of maps. Say
   "the reference plant" or "the reference case". Floor notes and open items are in `CLAUDE.local.md` (not in git).

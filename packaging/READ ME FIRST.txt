@@ -1,0 +1,41 @@
+DRISHTI Map {VERSION}
+=================
+
+What it is
+  A Windows program that finds out why an AMR laser map makes robots jump or lose
+  position, builds a corrected map file, and checks it before any robot sees it.
+  For SEER / RoboShop robots (.smap map files).
+
+Install
+  There is nothing to install. Copy DrishtiMap.exe anywhere (Desktop, a folder, a
+  network share) and double-click it. It is one file and needs no other files.
+
+Needs
+  Windows 10 or 11, 64-bit.
+  Microsoft Edge WebView2 Runtime. Windows 11 has it. On a PC without it the
+  program opens in the web browser instead and tells you so.
+  To read from robots: the PC must be on the robot network.
+  For "What happened?" (past events): a login on the fleet manager that works
+  with an SSH key, and the Windows OpenSSH client (part of Windows 10 and 11).
+  An AI model is optional. Every tool works without one.
+
+First start
+  Windows may show "Windows protected your PC" because the file is not signed by
+  a publisher. Choose "More info", then "Run anyway". Your IT department can sign
+  the file to remove this message.
+  The program creates the folder  Documents\DRISHTI Map  for your maps, recordings
+  and results, and opens the Help page "Start here". Follow WI-01 from there.
+
+Where things are kept
+  Documents\DRISHTI Map\          maps, candidates, recordings, results, robot list
+  %APPDATA%\DRISHTI Map\          settings; API keys are stored encrypted per user
+  To use a shared or different folder: click the workspace path at the top left.
+
+Safety
+  The program only reads from robots. It cannot load a map, change a parameter or
+  move a robot. From the fleet manager it only reads the history files. Map files it builds go into the "candidates" folder; a person
+  loads them in RoboShop, on one test robot first.
+
+Remove
+  Delete DrishtiMap.exe. Delete the two folders above if you also want the data
+  and settings gone.
