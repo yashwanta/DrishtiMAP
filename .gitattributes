@@ -1,0 +1,2 @@
+# The history script is sent to a Linux server: keep Unix line endings on every PC.
+*.py text eol=lf

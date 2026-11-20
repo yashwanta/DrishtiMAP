@@ -12,7 +12,7 @@ import (
 // The script that runs on the fleet manager must stay read-only: it may open files for reading and
 // print. This test fails if it ever gains a call that writes, deletes, or starts another program.
 func TestHistoryScriptIsReadOnly(t *testing.T) {
-	src := string(script)
+	src := strings.ReplaceAll(string(script), "\r", "")
 	for _, bad := range []string{"subprocess", "os.system", "os.popen", "os.remove", "os.unlink", "os.rename", "os.rmdir", "os.mkdir", "os.makedirs",
 		"os.chmod", "os.chown", "os.kill", "shutil", "socket", "urllib", "requests", "exec(", "eval(", "__import__", ".write(", "truncate", "ctypes", "pty", "os.exec", "os.spawn", "os.fork"} {
 		if strings.Contains(src, bad) {

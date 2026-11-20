@@ -77,7 +77,7 @@ func (s Source) run(ctx context.Context, prog func(done, total int), args ...str
 	remote := "python3 - " + strings.Join(args, " ")
 	cmd := exec.CommandContext(ctx, ssh, "-o", "BatchMode=yes", "-o", "ConnectTimeout=12", "-o", "ServerAliveInterval=15", "-T", s.SSH, remote)
 	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true, CreationFlags: 0x08000000} // no console window
-	cmd.Stdin = bytes.NewReader(script)
+	cmd.Stdin = bytes.NewReader(bytes.ReplaceAll(script, []byte("\r"), nil)) // a Windows checkout may add CRs
 	var stderr bytes.Buffer
 	cmd.Stderr = &stderr
 	out, err := cmd.StdoutPipe()
