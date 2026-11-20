@@ -77,7 +77,7 @@ async function refresh() {
   });
   const all = [...S.ws.maps, ...S.ws.candidates].map(m => m.name);
   const fill = (sel, items, blank) => { const v = sel.value; sel.replaceChildren(...(blank ? [el('option', { value: '', textContent: '—' })] : []), ...items.map(n => el('option', { value: n, textContent: n }))); if (items.includes(v) || (blank && v === '')) sel.value = v; };
-  fill($('#selMap'), all); fill($('#selMap2'), all, true); fill($('#selAnchor'), all, true); fill($('#selDrive'), S.ws.drives.map(d => d.name)); fill($('#scanRobot'), S.ws.robots.map(r => r.name));
+  fill($('#selMap'), all); fill($('#selMap2'), all, true); fill($('#selAnchor'), all, true); fill($('#selDrive'), S.ws.drives.map(d => d.name)); fill($('#scanRobot'), S.ws.robots.map(r => r.name)); $('#histRobots').replaceChildren(...S.ws.robots.map(r => el('option', { value: r.name })));
   if (S.drive) $('#selDrive').value = S.drive; else S.drive = $('#selDrive').value;
   const ps = $('#selProv'); ps.replaceChildren(...S.state.providers.map(p => el('option', { value: p.id, textContent: p.name + (p.model ? ' · ' + p.model : '') })));
   ps.value = S.state.active; provNote();
@@ -133,6 +133,8 @@ function paint() {
   if (L.track && o.rows) { for (const p of o.rows) { ctx.fillStyle = p.fit >= 55 ? '#4ade80' : p.fit >= 40 ? '#facc15' : '#f87171'; ctx.fillRect(X(p.x) - 2 * dp, Y(p.y) - 2 * dp, 4 * dp, 4 * dp); } }
   if (o.jumps) for (const j of o.jumps) { const big = j.Step >= 0.5 && !j.Ambiguous && !j.TrackBreak; ctx.strokeStyle = big ? '#ff3b3b' : '#facc15'; ctx.lineWidth = 2 * dp; ctx.beginPath(); ctx.arc(X(j.X), Y(j.Y), (big ? 14 : 9) * dp, 0, 7); ctx.stroke(); const t = (big ? 'JUMP ' : 'step ') + j.Step.toFixed(2) + ' m' + (j.TrackBreak ? ' (track restart)' : j.Ambiguous ? ' (ambiguous)' : '') + ' ' + j.Near, tw = ctx.measureText(t).width; ctx.fillStyle = '#0e1014dd'; ctx.fillRect(X(j.X) + 14 * dp, Y(j.Y) - 9 * dp, tw + 8 * dp, 17 * dp); ctx.fillStyle = ctx.strokeStyle; ctx.fillText(t, X(j.X) + 18 * dp, Y(j.Y) + 4 * dp); }
   if (o.hi) { ctx.lineWidth = 4 * dp; for (const h of o.hi) { ctx.strokeStyle = h.c; ctx.beginPath(); ctx.moveTo(X(h.l[0]), Y(h.l[1])); ctx.lineTo(X(h.l[2]), Y(h.l[3])); ctx.stroke(); if (h.ring) { ctx.lineWidth = 2 * dp; ctx.beginPath(); ctx.arc(X((h.l[0] + h.l[2]) / 2), Y((h.l[1] + h.l[3]) / 2), 12 * dp, 0, 7); ctx.stroke(); ctx.lineWidth = 4 * dp; } } }
+  if (o.hbox) { const b = o.hbox; ctx.setLineDash([6 * dp, 4 * dp]); ctx.strokeStyle = '#f472b6'; ctx.lineWidth = 1.5 * dp; ctx.strokeRect(X(b[0]), Y(b[3]), X(b[2]) - X(b[0]), Y(b[1]) - Y(b[3])); ctx.setLineDash([]); ctx.fillStyle = '#f472b6'; ctx.fillText('area compared with the other robots', X(b[0]) + 4 * dp, Y(b[3]) - 5 * dp); }
+  if (o.marks) { let n = 0; for (const e of o.marks) { if (e.kind === 'low' || (e.x === 0 && e.y === 0)) continue; n++; const x = X(e.x), y = Y(e.y), c = e.big ? '#ff3b3b' : '#facc15'; ctx.strokeStyle = c; ctx.lineWidth = 2 * dp; ctx.beginPath(); ctx.arc(x, y, (e.big ? 11 : 7) * dp, 0, 7); ctx.stroke(); if (k > 6 || e.big) { const t = e.at + ' ' + ({ stop: 'stop', swing: 'heading swing', jump: 'JUMP', reloc: 'relocalised', alarm: e.text.split(':')[0], gap: 'no data' })[e.kind], off = (n % 4) * 15 * dp, tw = ctx.measureText(t).width; ctx.fillStyle = '#0e1014dd'; ctx.fillRect(x + 13 * dp, y - 9 * dp + off, tw + 8 * dp, 16 * dp); ctx.fillStyle = c; ctx.fillText(t, x + 17 * dp, y + 3 * dp + off); } } }
   // drawing
   const d = S.draw; ctx.lineWidth = 2 * dp; ctx.strokeStyle = '#f5a623'; ctx.fillStyle = '#f5a62322';
   if (d.poly.length) { ctx.beginPath(); d.poly.forEach((p, i) => ctx[i ? 'lineTo' : 'moveTo'](X(p[0]), Y(p[1]))); if (d.mode !== 'poly') ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.fillStyle = '#f5a623'; for (const p of d.poly) ctx.fillRect(X(p[0]) - 3 * dp, Y(p[1]) - 3 * dp, 6 * dp, 6 * dp); }
@@ -242,6 +244,31 @@ async function pollRec() {
 }
 $('#recBadge').onclick = async () => { const r = await run('record_stop', {}, true); out('recording', r.summary); pollRec(); refresh(); };
 
+// ---------------------------------------------------------------- past event (fleet manager history)
+const dtLocal = d => { const p = n => String(n).padStart(2, '0'); return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) + 'T' + p(d.getHours()) + ':' + p(d.getMinutes()); };
+$('#histTo').value = dtLocal(new Date()); $('#histFrom').value = dtLocal(new Date(Date.now() - 3600e3));
+$('#histSite').onclick = async () => {
+  let s = {}; try { s = await api('/api/site'); } catch (e) { }
+  const [l1, ssh] = field('Fleet manager login (user@address). This PC must be able to log in with an SSH key; no password is stored.', { value: s.fleetSSH || '', placeholder: 'reader@10.0.0.76' }), [l2, dir] = field('History folder on the fleet manager (leave empty for the usual one)', { value: s.logDir || '', placeholder: '/opt/.data/rds/replay/robotStatuses' }), [l3, url] = field('AMR Health server for Wi-Fi history (optional)', { value: s.healthURL || '', placeholder: 'https://10.0.0.27' }), [l4, plant] = field('Plant name on that server (optional)', { value: s.plant || '' }), ins = el('input', { type: 'checkbox', checked: !!s.healthInsecure });
+  dialog('History sources for this workspace (read-only)', el('div', {}, l1, l2, l3, l4, el('label', { className: 'row' }, ins, 'that server uses its own certificate (do not check it)'), el('p', { textContent: 'DRISHTI Map only reads from these servers. On the fleet manager it runs one built-in script that opens the history files for reading; it cannot change or delete anything there. The settings are kept in this workspace (site.json).' })), 'Save', async () => { await post('/api/site', { fleetSSH: ssh.value.trim(), logDir: dir.value.trim(), healthURL: url.value.trim(), plant: plant.value.trim(), healthInsecure: ins.checked }); toast('History sources saved'); });
+};
+$('#histGo').onclick = async () => {
+  if (busy) return toast('Another analysis is still running.');
+  const robot = $('#histRobot').value.trim(), from = $('#histFrom').value, to = $('#histTo').value, map = $('#selMap').value;
+  if (!robot || !from || !to) return out('what happened', 'Give the robot name and the From and To times.');
+  busy = true; $('#histGo').disabled = true;
+  try {
+    const r = await run('what_happened', { robot, from, to, map: map || undefined, compare: $('#histCmp').checked, days: +$('#histDays').value }), d = r.data || {};
+    out('what happened ' + robot, r.summary);
+    if (map && (!S.A || S.A.name !== map)) await showMap(map);
+    S.ov = { track: d.track, marks: d.events, hbox: d.box || null };
+    if (d.box) { const b = d.box; S.view.cx = (b[0] + b[2]) / 2; S.view.cy = (b[1] + b[3]) / 2; S.view.k = Math.max(4, Math.min(60, Math.min(cv.width / (b[2] - b[0] + 16), cv.height / (b[3] - b[1] + 16)))); }
+    if (!S.A) toast('Pick a map to see the trip on it.');
+    draw();
+  } catch (e) { out('what happened — did not run', e.message); }
+  finally { busy = false; $('#histGo').disabled = false; }
+};
+
 $('#settingsBtn').onclick = () => {
   const box = el('div'), rows = [];
   const add = p => {
@@ -313,8 +340,9 @@ for (const b of $$('.tabs button')) b.onclick = () => { for (const x of $$('.tab
     if (q.get('pick')) { const v = q.get('pick').split(',').map(Number); edClick(X(v[0]), Y(v[1])); }
     if (q.get('help')) await openHelp(q.get('help'));
     if (q.get('scan')) await scanLoad(+q.get('scan'), true);
+    if (q.get('hist')) { const v = q.get('hist').split(','); $('#histRobot').value = v[0]; $('#histFrom').value = v[1]; $('#histTo').value = v[2]; $('#histCmp').checked = v[3] !== '0'; await $('#histGo').onclick(); }
     if (!S.ws.maps.length && !S.ws.candidates.length && !S.ws.drives.length && !location.search.includes('help=')) openHelp('README');   // first start on an empty workspace
-    refreshMarks(); document.title = 'DRISHTI Map' + (q.get('run') ? ' ready' : '');
+    refreshMarks(); document.title = 'DRISHTI Map' + (q.get('run') || q.get('hist') ? ' ready' : '');
   } catch (e) { out('Start', e.message); }
   draw();
 })();

@@ -21,7 +21,7 @@ map file, and checks it before any robot sees it. An AI model is optional; every
 2. **Candidates are files.** Builds and edits write new files to `workspace\candidates\`; they never
    overwrite a source map or an existing candidate. A person loads a candidate in RoboShop, on ONE test
    robot first. Claude never loads a map on a robot.
-3. **Claude does read-only checks only** on plant servers and robots. Anything that changes a robot or
+3. **Read-only on plant servers.** `fleet\history.py` is the only thing the app runs on a fleet manager; it may only open files for reading and print. `fleet\fleet_test.go` fails if it gains a write, delete, network or process call, or if a setting could carry a command. **Claude does read-only checks only** on plant servers and robots. Anything that changes a robot or
    server is a script or file the user runs.
 4. **No mock data in the app.** Tests run on the real maps and recordings in `workspace\`. The only mock
    left is the AI provider test (`ai\chat_test.go`), until a real API key or gateway is available.
@@ -37,6 +37,7 @@ map file, and checks it before any robot sees it. An AI model is optional; every
 | `mapedit` | move region, merge box, hand edits (`edit.go`), checks (`check.go`), compare, detector (`detect.go`) |
 | `lasertrack` | laser track, stretch replay, rigid fit, pieces, measure turn, per-scanner scans (`scan.go`) |
 | `seer` | read-only robot client |
+| `fleet` | past events: fleet manager history over the user's ssh login (`history.py` runs there, read-only), trip analysis, comparison with other robots, Wi-Fi history from AMR Health |
 | `app` | workspace, job runner, the tools (`tools.go`, `tools2.go`, `scan.go`), key storage |
 | `ai` | Claude (official Go SDK v2) and OpenAI-compatible connections, system prompt, connection test |
 | `help` | help articles (Markdown, embedded) |
@@ -78,6 +79,7 @@ Release: bump `Version` in `app\app.go`, build, copy the exe and `READ ME FIRST.
   `go run github.com/akavel/rsrc@v0.10.2 -arch amd64 -ico build/icon.ico -o rsrc_windows_amd64.syso`
 - **Never `taskkill /IM DrishtiMap.exe`**: it also closes the user's open app. Build test copies under
   another name (`DrishtiMap_new.exe`) and kill only that name.
+- **Fleet history lessons:** a robot turning on the spot is normal (only flag a turn when confidence collapses); unchanged data then a leap of metres is a connection stall, not a position jump; a parked robot looks the same as no data; robot clocks are wrong, use the fleet manager line time. Real-event regression: `workspace\history\trip_amr08_20261120.tsv` (`go test ./fleet` with DRISHTI_WS).
 - `--workspace` is for one run only and does not change the saved workspace.
 - The test `tests\e2e.js robot` step replaces the robot list for a moment and restores it.
 - Plain `msedge --headless --screenshot` hangs here; `tests\ui.js` drives Edge over the DevTools port.

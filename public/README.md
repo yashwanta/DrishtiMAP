@@ -77,8 +77,14 @@ as a before/after record.
 Connect an AI model (Claude, any OpenAI-compatible server, or a local model) and ask "why does AMR-03 jump near
 LM520?". The assistant runs the same tools and explains the result. Every tool also works without a model.
 
+**Find out what happened earlier, when nobody was recording.**
+Pick a robot and a time range and the app reads the fleet manager's own history, second by second: where the
+robot drove, every stop, position jump, relocalisation and error, and whether the connection stalled. It then
+checks how every other robot did in the same place over the last days, which tells a weak spot in the map from a
+problem with one robot, and it lists the Wi-Fi events of those minutes. Read-only, through your own login.
+
 **Train people on the method.**
-The Help window holds 9 work instructions and 9 knowledge-base articles: how a robot uses a map, what each symptom
+The Help window holds 10 work instructions and 9 knowledge-base articles: how a robot uses a map, what each symptom
 usually means, how to read the numbers, and a full worked case.
 
 ## Who it is for
@@ -100,10 +106,11 @@ first trial. The app turns that method into buttons, so the next case takes hour
 | Step | Button (Tools tab) | What you get |
 |---|---|---|
 | Find what is wrong | **Detect with Recording**, **Detect (map file only)** | every finding marked on the map: jumps, low wall match, feature lines on paths, broken links |
+| A robot stopped or was off position earlier | **What happened?** (Tools tab, Past event) | the trip from the fleet manager's history: stops, jumps, relocalisations, errors, connection stalls; the same place for every other robot; Wi-Fi events. Read-only |
 | Are all robots on the same map | **Check maps on all robots** (left panel) | each robot's current map and checksum, the ones that differ flagged; optional download |
 | Change a map by hand | **Edit** tab | delete feature lines, erase / move / take walls, set path direction or speed, move / add / delete stations and paths; saved as a checked candidate |
 | See the LiDAR data | **LiDAR · what each scanner sees** (Tools tab) | one scan at a time from a recording, or live from a robot; each scanner in its own colour with the height of its scan plane |
-| Learn the method | **Help** (top right) | 9 work instructions (WI) and 9 knowledge-base articles (KB), also readable by the assistant |
+| Learn the method | **Help** (top right) | 10 work instructions (WI) and 9 knowledge-base articles (KB), also readable by the assistant |
 | Record a drive | robot → **rec** | position, confidence and lasers every 0.7 s, read-only |
 | Copy the robot's map | robot → **map** | the map the robot is using now, into `maps\` |
 | What the robot reported | **Recording summary** | stations, confidence, jumps, abnormal localisation states |
@@ -119,6 +126,7 @@ The **Assistant** tab is the same tools driven by an AI model in plain language.
 ## Rules built into the program
 
 - **Read-only on robots.** The only requests it can send are: robot information (1000), position (1004), laser scan (1009), map list (1300) and map download (4011). There is no code that loads a map, changes a parameter, relocalises or moves a robot. The list is shown in Settings.
+- **Read-only on plant servers.** For a past event the app reads the fleet manager's history through your own SSH login, using one built-in script that only opens the history files and prints lines; from an AMR Health server it only fetches Wi-Fi history. No password is stored and nothing on a server is changed.
 - **Candidates are files, not deployments.** A candidate is written to `candidates\` and never replaces a source map or an existing candidate. A person loads it in RoboShop, on one test robot first.
 - **The AI model sees summaries only.** It receives the text result of each tool (what you see in the Output panel), never the map or laser files. With a local model (Ollama, LM Studio) nothing leaves the PC.
 - **API keys** are stored encrypted with Windows DPAPI for the current Windows user (`%APPDATA%\DRISHTI Map\config.json`).
@@ -146,6 +154,7 @@ workspace\
   drives\       recordings (loc_NNNN.json, laser_NNNN.json, locb_NNNN.json)
   results\      saved text and pictures
   robots.json   name + IP of robots (read-only access)
+  site.json     fleet manager login and AMR Health address for "What happened?" (optional)
 ```
 
 Click the workspace path at the top to switch folder. `DrishtiMap.exe` uses a `workspace` folder next to itself if there is one.

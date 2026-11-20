@@ -75,6 +75,14 @@
         </ol>
         It only reads from the robot. Keep this window open while it records. More: Help, WI-01.</div>
 
+      <h4>Past event · what happened to a robot</h4>
+      <p>Reads the fleet manager's history (read-only) for a time that has already passed: where the robot drove, every stop, jump, relocalisation and error, how the other robots did in the same place, and the Wi-Fi events of those minutes.</p>
+      <label>Robot <input id="histRobot" list="histRobots" placeholder="AMR-08"><datalist id="histRobots"></datalist></label>
+      <label class="row">From <input id="histFrom" type="datetime-local"> to <input id="histTo" type="datetime-local"></label>
+      <label class="row" title="Looks at every robot that drove through the trouble area. About a minute per day."><input type="checkbox" id="histCmp" checked>compare with the other robots, last <select id="histDays"><option>1</option><option>2</option><option>3</option><option>7</option></select> day(s)</label>
+      <div class="row"><button id="histGo" class="primary">What happened?</button><button id="histSite" title="Where this workspace's fleet manager and AMR Health server are">History sources …</button></div>
+      <p class="ex"><b>Example:</b> Robot <code>AMR-08</code>, From <code>06:20</code> to <code>07:00</code> this morning. Times are the fleet manager's clock. The trip is drawn on the <b>Map</b> chosen above, coloured by confidence, with a mark at each stop and error. <b>First time:</b> press <b>History sources</b> and enter the fleet manager login. The history has no laser data: to see which walls do not match, record a drive and use Detect. More: Help, WI-09.</p>
+
       <h4>1 · What the robot reported</h4>
       <p>Stations, confidence and jumps from the recording itself.</p>
       <button data-run="drive_summary">Recording summary</button>

@@ -26,6 +26,7 @@ DRISHTI Map finds out why a laser map makes robots jump or lose their position, 
 | The candidate passed, how do I put it on the floor | [[WI-05]] |
 | Remove a feature line, change a path direction, erase walls, move a station | [[WI-06]] |
 | Are all robots on the same map? | [[WI-07]] |
+| A robot stopped or was off position earlier today: what happened? | [[WI-09]] |
 | Let the AI model do the steps | [[WI-08]] |
 | What does this symptom mean? | [[KB-02]] |
 | What do the numbers mean? | [[KB-04]] |

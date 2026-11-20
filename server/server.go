@@ -201,6 +201,19 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		jsonOut(w, map[string]bool{"ok": true})
+	case "/api/site":
+		if r.Method == "POST" {
+			var q app.Site
+			if err := body(r, &q); err != nil {
+				fail(w, 400, err)
+				return
+			}
+			if err := a.SaveSite(q); err != nil {
+				fail(w, 400, err)
+				return
+			}
+		}
+		jsonOut(w, a.Site())
 	case "/api/provider":
 		var q struct {
 			Provider app.Provider `json:"provider"`

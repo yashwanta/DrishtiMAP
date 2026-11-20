@@ -27,7 +27,7 @@ const done = code => { try { edge.kill(); } catch (e) { } setTimeout(() => { try
   await send('Runtime.enable'); await send('Log.enable'); await send('Page.enable');
   await send('Emulation.setDeviceMetricsOverride', { width: 1560, height: 960, deviceScaleFactor: 1, mobile: false });
   await send('Page.navigate', { url: url + (query ? '&' + query : '') });
-  const wantReady = /run=/.test(query);
+  const wantReady = /run=|hist=/.test(query);
   let title = '';
   for (let i = 0; i < 480; i++) { await sleep(250); title = await evalJS('document.title'); if (wantReady ? title === 'DRISHTI Map ready' : (title === 'DRISHTI Map' && await evalJS("!!document.querySelector('#mapsList li')"))) break; }
   if (after) { console.log('after:', JSON.stringify(await evalJS(after))); await sleep(1500); }
