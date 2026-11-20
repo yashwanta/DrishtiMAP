@@ -103,15 +103,14 @@ Release: bump `Version` in `app\app.go`, build, copy the exe and `READ ME FIRST.
 - A map name says nothing about content: compare md5. Always build from the file on the robot today.
 - Reference plant robots: front scanner FocueRay h100 at 0.194 m, rear c200 at 0.197 m above the floor.
 
-## GitHub (public, program only)
+## GitHub (public, source for contributors)
 
-github.com/yashwanta/DrishtiMAP is public and holds NO source code (user decision 2026-11-19): only a README
-and the release zip. Never push the `dev` branch or any source file.
+github.com/yashwanta/DrishtiMAP is public and holds the source code so contributors can work on it
+(user decision 2026-11-20; on 2026-11-19 the source had been taken off for a day).
 
-- Source lives on the local branch `dev`, which has no upstream.
-- The GitHub page is the local branch `public` (tracks origin/main); its only file is `README.md`, a copy of
-  `public\README.md`. To update the page: edit `public\README.md`, commit a tree holding just that file on
-  top of `public`, push `public:main`.
-- A release = tag on `public` + `release\DRISHTI-Map-<version>.zip` uploaded by the user in the browser.
+- Local branch `main` tracks `origin/main`. Site data never goes there: `workspace\` (maps, recordings,
+  robot addresses, `site.json` with the server login), `.smap` files, map screenshots, exes and `release\`
+  are in `.gitignore`. Contributors get test data from the owner, outside GitHub.
+- A release = tag + `release\DRISHTI-Map-<version>.zip` uploaded by the user in the browser.
 - Never commit the company name, plant names, robot addresses, maps, recordings or screenshots of maps. Say
   "the reference plant" or "the reference case". Floor notes and open items are in `CLAUDE.local.md` (not in git).

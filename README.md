@@ -169,6 +169,24 @@ Moving only part of a misplaced piece just moves the jump (that is what the earl
 - Stations and paths added in the Edit tab exist only in the map file; the fleet scene needs them too. Added objects have not been loaded in RoboShop yet.
 - Tested with SEER maps from one site. Other map generations may carry fields this version has not seen; unknown fields are always written back unchanged.
 
+## For contributors
+
+```
+git clone https://github.com/yashwanta/DrishtiMAP.git
+cd DrishtiMAP
+build.cmd                      needs Go 1.24 or newer; writes DrishtiMap.exe
+```
+
+- **No site data is in this repository.** Maps, recordings, robot addresses and server logins stay with the
+  site (`workspace\` is ignored by git). The unit tests that need no data run on a fresh clone; the
+  regression and end-to-end tests are skipped or fail until you have a workspace with real maps and a
+  recording. Ask the owner for a test workspace, or use your own site's files.
+- **Never commit** a company or plant name, robot or server addresses, `.smap` files, recordings, or
+  screenshots that show a map. Say "the reference plant".
+- **Keep the read-only rules.** `seer\seer_test.go` and `fleet\fleet_test.go` fail if a request or a server
+  call that changes anything is added. Do not weaken them.
+- Work on a branch and open a pull request.
+
 ## Build and test
 
 ```
@@ -183,4 +201,4 @@ node tests\e2e_edit.js <address>             detect, hand edits, help and fleet 
 node tests\ui.js <address> shot.png "map=NAME&drive=NAME&run=replay"   opens the page in headless Edge
 ```
 
-Source layout: `smap` (map file reader/writer that keeps every field), `mapedit` (build, check, compare), `lasertrack` (laser track, replay, fits), `seer` (read-only robot client), `app` (workspace, tools), `help` (work instructions and knowledge base, Markdown in `help\docs`), `ai` (model connections), `server` (window back end + `web` front end).
+Source layout: `smap` (map file reader/writer that keeps every field), `mapedit` (build, check, compare), `lasertrack` (laser track, replay, fits), `seer` (read-only robot client), `fleet` (past events from the fleet manager history, read-only), `app` (workspace, tools), `help` (work instructions and knowledge base, Markdown in `help\docs`), `ai` (model connections), `server` (window back end + `web` front end).
