@@ -27,8 +27,8 @@ func f(v float64) *float64 { return &v }
 // The two edits made by hand on the robot (line removed, LM517..LM521 set to forward) are reproduced
 // with the edit engine and must give the same stations, paths and feature lines as the robot's file.
 func TestEditReproducesRobotEdit(t *testing.T) {
-	v5 := wsMap(t, "SPRAMRMAP_v5")
-	want := wsMap(t, "SPRAMRMAP_v5_robot_edit_1215")
+	v5 := wsMap(t, refName("v5"))
+	want := wsMap(t, refName("v5_robot_edit_1215"))
 	ed := NewEditor(v5.Clone(), nil)
 	// what the robot's file changed in path direction
 	bp := map[string]smap.Path{}
@@ -91,7 +91,7 @@ func TestEditReproducesRobotEdit(t *testing.T) {
 }
 
 func TestEditOps(t *testing.T) {
-	base := wsMap(t, "SPRAMRMAP_v5")
+	base := wsMap(t, refName("v5"))
 	ed := NewEditor(base.Clone(), func(n string) (*smap.Map, error) { return wsMap(t, n), nil })
 	must := func(op EditOp) string {
 		t.Helper()
@@ -193,12 +193,12 @@ func TestEditOps(t *testing.T) {
 	}
 	erased := w0 - len(ed.M.Walls())
 	// take them back from the unedited map
-	must(EditOp{Op: "take_walls", Donor: "SPRAMRMAP_v5", Box: []float64{30, 30, 34, 34}})
+	must(EditOp{Op: "take_walls", Donor: refName("v5"), Box: []float64{30, 30, 34, 34}})
 	if len(ed.M.Walls()) != w0 || erased == 0 {
 		t.Fatalf("walls %d -> %d (erased %d)", w0, len(ed.M.Walls()), erased)
 	}
 	// add: nothing new when the dots are already there
-	fails(EditOp{Op: "take_walls", Donor: "SPRAMRMAP_v5", Box: []float64{30, 30, 34, 34}, Mode: "add"}, "nothing to add")
+	fails(EditOp{Op: "take_walls", Donor: refName("v5"), Box: []float64{30, 30, 34, 34}, Mode: "add"}, "nothing to add")
 	if len(ed.M.Walls()) != w0 {
 		t.Fatalf("add duplicated dots: %d -> %d", w0, len(ed.M.Walls()))
 	}
@@ -242,7 +242,7 @@ func TestEditOps(t *testing.T) {
 
 // An unedited map has no structural faults and the detector does not invent any.
 func TestDetectCleanMaps(t *testing.T) {
-	for _, n := range []string{"SPRAMRMAP_live_421395c7", "SPRAMRMAP_sep16"} {
+	for _, n := range []string{refName("live_421395c7"), refName("sep16")} {
 		m := wsMap(t, n)
 		for _, x := range Detect(m) {
 			if x.Level == "fault" {

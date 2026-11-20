@@ -18,7 +18,8 @@ async function run(tool, args) {
   }
 }
 const del = n => fetch(base + '/api/delete-candidate', { method: 'POST', headers: H, body: JSON.stringify({ name: n }) });
-const LIVE = 'SPRAMRMAP_live_421395c7', V5 = 'SPRAMRMAP_v5', EDIT = 'SPRAMRMAP_v5_robot_edit_1215', D6 = 'amr06_loop_nov13';
+const P = process.env.DRISHTI_MAP || (() => { try { const f = require('fs').readdirSync(require('path').join(process.env.DRISHTI_WS || 'workspace', 'maps')).find(n => n.endsWith('_live_421395c7.smap')); return f ? f.replace('_live_421395c7.smap', '') : 'MAP'; } catch (e) { return 'MAP'; } })();   // the site's map name, read from the workspace files
+const LIVE = P + '_live_421395c7', V5 = P + '_v5', EDIT = P + '_v5_robot_edit_1215', D6 = 'amr06_loop_nov13';
 const steps = {
   async detect() {
     const a = await run('detect_problems', { map: V5 }); console.log(a.summary);

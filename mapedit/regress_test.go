@@ -6,6 +6,7 @@ import (
 	"math"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"drishtimap/smap"
@@ -78,7 +79,7 @@ func diffTrees(a, b any, path string, out *[]string) {
 
 func TestRoundTrip(t *testing.T) {
 	ws, _ := refs(t)
-	for _, f := range []string{"SPRAMRMAP_live_421395c7.smap", "SPRAMRMAP_v5_robot_edit_1215.smap"} {
+	for _, f := range []string{refName("live_421395c7.smap"), refName("v5_robot_edit_1215.smap")} {
 		raw, _ := os.ReadFile(filepath.Join(ws, "maps", f))
 		m, err := smap.FromBytes(raw)
 		if err != nil {
@@ -104,7 +105,7 @@ func TestRoundTrip(t *testing.T) {
 }
 
 // the region the v5 build used: y -14..42, x >= 7.5 (south leg) / 12 (middle) / 15 (north)
-var sprRegion = pts(7.5, -14, 7.5, 1, 12, 3, 12, 29, 15, 31, 15, 42, 500, 42, 500, -14)
+var eastRegion = pts(7.5, -14, 7.5, 1, 12, 3, 12, 29, 15, 31, 15, 42, 500, 42, 500, -14)
 
 func pts(v ...float64) (o []smap.Pt) {
 	for i := 0; i+1 < len(v); i += 2 {
@@ -121,11 +122,11 @@ func TestV5Rebuild(t *testing.T) {
 		t.Fatal(err)
 	}
 	json.Unmarshal(b, &T)
-	base := load(t, filepath.Join(ws, "maps", "SPRAMRMAP_live_421395c7.smap"))
-	anchor := load(t, filepath.Join(ws, "maps", "SPRAMRMAP_sep16.smap"))
-	donor := load(t, filepath.Join(ws, "maps", "SPRAMRMAP_v3_orig.smap"))
+	base := load(t, filepath.Join(ws, "maps", refName("live_421395c7.smap")))
+	anchor := load(t, filepath.Join(ws, "maps", refName("sep16.smap")))
+	donor := load(t, filepath.Join(ws, "maps", refName("v3_orig.smap")))
 	cand := base.Clone()
-	rep, err := MoveRegion(cand, MoveParams{T: smap.Rigid{Th: T.Th, Tx: T.Tx, Ty: T.Ty}, Region: sprRegion, Anchor: anchor, MapName: "SPRAMRMAP_v5"})
+	rep, err := MoveRegion(cand, MoveParams{T: smap.Rigid{Th: T.Th, Tx: T.Tx, Ty: T.Ty}, Region: eastRegion, Anchor: anchor, MapName: refName("v5")})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -162,8 +163,8 @@ func TestV5Rebuild(t *testing.T) {
 // The check must catch it.
 func TestStaleLineIsCaught(t *testing.T) {
 	ws, _ := refs(t)
-	base := load(t, filepath.Join(ws, "maps", "SPRAMRMAP_live_421395c7.smap"))
-	v5 := load(t, filepath.Join(ws, "maps", "SPRAMRMAP_v5.smap"))
+	base := load(t, filepath.Join(ws, "maps", refName("live_421395c7.smap")))
+	v5 := load(t, filepath.Join(ws, "maps", refName("v5.smap")))
 	v := Verify(base, v5)
 	found := false
 	for _, n := range v.NearLines {
@@ -179,11 +180,21 @@ func TestStaleLineIsCaught(t *testing.T) {
 
 func TestCompareRobotEdit(t *testing.T) {
 	ws, _ := refs(t)
-	a := load(t, filepath.Join(ws, "maps", "SPRAMRMAP_v5.smap"))
-	b := load(t, filepath.Join(ws, "maps", "SPRAMRMAP_v5_robot_edit_1215.smap"))
+	a := load(t, filepath.Join(ws, "maps", refName("v5.smap")))
+	b := load(t, filepath.Join(ws, "maps", refName("v5_robot_edit_1215.smap")))
 	d := Compare(a, b)
 	t.Log("\n" + d.Text("v5", "robot edit"))
 	if d.LinesOnlyA != 144 || d.WallsOnlyA != 217 || len(d.PathsChanged) != 6 || len(d.StationsChanged) != 0 {
 		t.Errorf("expected 144 removed feature lines and changed paths, got %d lines, %d paths", d.LinesOnlyA, len(d.PathsChanged))
 	}
+}
+
+// refName returns the name of a reference map in the test workspace. The maps carry the site's own
+// map name as a prefix; it is read from the files so that it does not have to be written here.
+func refName(suffix string) string {
+	m, _ := filepath.Glob(filepath.Join(os.Getenv("DRISHTI_WS"), "maps", "*_live_421395c7.smap"))
+	if len(m) == 0 {
+		return "MAP_" + suffix
+	}
+	return strings.TrimSuffix(filepath.Base(m[0]), "live_421395c7.smap") + suffix
 }

@@ -57,7 +57,7 @@
         <label>Map<select id="selMap"></select></label>
         <label>Second map<select id="selMap2"></select></label>
         <label class="row">Samples <input id="from" type="number" min="1" placeholder="from"> <input id="to" type="number" min="1" placeholder="to"></label></div>
-      <p class="ex"><b>Example:</b> Recording = a drive you recorded, such as <code>amr06_loop_nov13</code>; Map = the map to test, such as <code>SPRAMRMAP_v5c</code>; Second map empty; Samples empty = the whole drive. Samples <code>40</code> to <code>262</code> = only that part of the drive. <b>Lists empty on a new PC?</b> Nothing comes with the program: get the map with <b>map</b> and a recording with <b>rec</b> on a robot in the left panel (steps below), or copy a recording folder from another PC into <i>drives</i> in the workspace folder.</p>
+      <p class="ex"><b>Example:</b> Recording = a drive you recorded, such as <code>amr06_loop_nov13</code>; Map = the map to test, such as <code>PLANTMAP_v5c</code>; Second map empty; Samples empty = the whole drive. Samples <code>40</code> to <code>262</code> = only that part of the drive. <b>Lists empty on a new PC?</b> Nothing comes with the program: get the map with <b>map</b> and a recording with <b>rec</b> on a robot in the left panel (steps below), or copy a recording folder from another PC into <i>drives</i> in the workspace folder.</p>
 
       <h4>0 · Detect</h4>
       <p>Lists everything that looks wrong and marks it on the map. With a <b>Recording</b> it also finds jumps and low wall match.</p>
@@ -115,7 +115,7 @@
       <h4>4 · Build a candidate</h4>
       <p>Writes a new file to <i>candidates</i>. Never loaded on a robot by this app. Base = <b>Map</b>.</p>
       <label>Candidate name <input id="candName" placeholder="SITEMAP_v6"></label>
-      <p class="ex"><b>Example:</b> Candidate name <code>SPRAMRMAP_v6</code>. The new file goes to <i>candidates</i>; the base map is not changed.</p>
+      <p class="ex"><b>Example:</b> Candidate name <code>PLANTMAP_v6</code>. The new file goes to <i>candidates</i>; the base map is not changed.</p>
       <fieldset><legend>Move a region as one piece</legend>
         <label class="row">th (rad) <input id="th" type="number" step="any"> tx <input id="tx" type="number" step="any"> ty <input id="ty" type="number" step="any"></label>
         <label>Region <input id="region" placeholder="draw it on the map, or x,y x,y x,y …"></label>
@@ -135,7 +135,7 @@
       <button data-run="check_candidate" title="Map = candidate, Second map = what it was built from">Check Map against Second map</button>
       <button data-run="compare_maps">Compare Second map → Map</button>
       <button data-run="map_info">Map details</button>
-      <p class="ex"><b>Example:</b> Map = <code>SPRAMRMAP_v5c</code>, Second map = <code>SPRAMRMAP_v5</code>. <b>Check</b>: every line must say PASS. <b>Compare</b>: lists everything that differs between the two. <b>Map details</b>: what is in the Map file.</p>
+      <p class="ex"><b>Example:</b> Map = <code>PLANTMAP_v5c</code>, Second map = <code>PLANTMAP_v5</code>. <b>Check</b>: every line must say PASS. <b>Compare</b>: lists everything that differs between the two. <b>Map details</b>: what is in the Map file.</p>
     </div>
     <div id="tab-edit" class="tab hidden">
       <p id="edIntro">Change a map by hand: remove feature lines, erase or replace walls, change a path's direction or speed, move, add or delete stations and paths. You work on a copy; saving writes a new candidate file with a check report. Nothing goes to a robot.</p>
@@ -162,14 +162,14 @@
         <div class="row"><button id="edUndo">Undo last</button><button id="edCancel">Discard all</button></div>
         <label>Candidate name <input id="edName" placeholder="SITEMAP_v6"></label>
         <button id="edSave" class="primary">Save as candidate and check</button>
-        <p class="ex"><b>Example:</b> name <code>SPRAMRMAP_v6</code>. The report lists each edit and the full check list. Then replay a recording through it on the Tools tab.</p>
+        <p class="ex"><b>Example:</b> name <code>PLANTMAP_v6</code>. The report lists each edit and the full check list. Then replay a recording through it on the Tools tab.</p>
       </div>
     </div>
     <div id="tab-chat" class="tab hidden">
       <div class="sel"><label>Model<select id="selProv"></select></label>
         <button id="connBtn">Connect a model (API key) …</button>
         <p class="note">The model receives only the text results of the tools, not your map or laser files<span id="localNote"></span>.</p>
-        <p class="ex"><b>Example:</b> connect a model first, then ask, with your own map and recording names from the left panel, “What is wrong with SPRAMRMAP_v5? Use recording amr06_loop_nov13.” or “Compare SPRAMRMAP_v5c with SPRAMRMAP_v5 and tell me if it is ready for a trial.” It runs the same tools and explains the result.</p></div>
+        <p class="ex"><b>Example:</b> connect a model first, then ask, with your own map and recording names from the left panel, “What is wrong with PLANTMAP_v5? Use recording amr06_loop_nov13.” or “Compare PLANTMAP_v5c with PLANTMAP_v5 and tell me if it is ready for a trial.” It runs the same tools and explains the result.</p></div>
       <div id="chatLog"></div>
       <div id="chatIn"><textarea id="chatText" rows="3" placeholder="Ask about a map or recording, e.g. “Where does the live map make robots jump, and why?”"></textarea>
         <div class="row"><button id="chatSend">Send</button><button id="chatStop" class="hidden">Stop</button><span class="grow"></span><button id="chatNew" class="mini">New chat</button></div></div>

@@ -103,7 +103,7 @@ func TestReplayMatchesFloor(t *testing.T) {
 		}
 		return m
 	}
-	live, v3, v4c, v5 := load("SPRAMRMAP_live_421395c7.smap"), load("SPRAMRMAP_v3_orig.smap"), load("SPRAMRMAP_v4c.smap"), load("SPRAMRMAP_v5.smap")
+	live, v3, v4c, v5 := load(refName("live_421395c7.smap")), load(refName("v3_orig.smap")), load(refName("v4c.smap")), load(refName("v5.smap"))
 	defer func() { GridShift = 0 }()
 	var turns []float64
 	for _, sh := range []float64{0, 0.013, 0.027} {
@@ -198,4 +198,14 @@ func mean(v []float64) float64 {
 		s += x
 	}
 	return s / float64(len(v))
+}
+
+// refName returns the name of a reference map in the test workspace. The maps carry the site's own
+// map name as a prefix; it is read from the files so that it does not have to be written here.
+func refName(suffix string) string {
+	m, _ := filepath.Glob(filepath.Join(os.Getenv("DRISHTI_WS"), "maps", "*_live_421395c7.smap"))
+	if len(m) == 0 {
+		return "MAP_" + suffix
+	}
+	return strings.TrimSuffix(filepath.Base(m[0]), "live_421395c7.smap") + suffix
 }

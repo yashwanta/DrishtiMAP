@@ -17,7 +17,8 @@ async function run(tool, args) {
     return Object.assign(st.result, { seconds: st.seconds });
   }
 }
-const LIVE = 'SPRAMRMAP_live_421395c7', V5 = 'SPRAMRMAP_v5', D6 = 'amr06_loop_nov13';
+const P = process.env.DRISHTI_MAP || (() => { try { const f = require('fs').readdirSync(require('path').join(process.env.DRISHTI_WS || 'workspace', 'maps')).find(n => n.endsWith('_live_421395c7.smap')); return f ? f.replace('_live_421395c7.smap', '') : 'MAP'; } catch (e) { return 'MAP'; } })();   // the site's map name, read from the workspace files
+const LIVE = P + '_live_421395c7', V5 = P + '_v5', D6 = 'amr06_loop_nov13';
 const REGION = [[7.5, -14], [7.5, 1], [12, 3], [12, 29], [15, 31], [15, 42], [500, 42], [500, -14]];
 const steps = {
   async security() {
@@ -53,16 +54,16 @@ const steps = {
     const p = await run('find_pieces', { drive: D6, map: LIVE }); console.log(p.summary);
     ok(p.data.some(x => x.stepAtSeam > 1.2), 'find_pieces shows a seam of more than 1.2 m on the live map');
     const d = await run('drift', { drive: D6, map: LIVE, ranges: [[40, 262]] }); console.log(d.summary.split('\n').slice(-3).join('\n'));
-    const m = await run('measure_turn', { drive: D6, pieceMap: LIVE, pieceRanges: [[40, 262]], refMap: 'SPRAMRMAP_v3_orig', refRanges: [[172, 372]], stations: ['LM430', 'LM443', 'LM513', 'LM521'] });
+    const m = await run('measure_turn', { drive: D6, pieceMap: LIVE, pieceRanges: [[40, 262]], refMap: P + '_v3_orig', refRanges: [[172, 372]], stations: ['LM430', 'LM443', 'LM513', 'LM521'] });
     console.log(m.summary); ok(Math.abs(m.data.rotDeg - 2.19) < 0.25, 'measured turn ' + m.data.rotDeg.toFixed(3) + ' deg (+-' + m.data.spreadDeg.toFixed(2) + ') agrees with the 2.19 deg used for v5 (' + m.seconds.toFixed(0) + ' s)');
     steps.T = m.data;
   },
   async build() {
     for (const n of ['E2E_move', 'E2E_final', 'E2E_nolines']) await fetch(base + '/api/delete-candidate', { method: 'POST', headers: H, body: JSON.stringify({ name: n }) });
     const T = { th: 0.038176525363106915, tx: -0.13739245063794822, ty: -0.12705210082579033 };
-    const a = await run('build_move_region', { base: LIVE, name: 'E2E_move', ...T, region: REGION, anchor: 'SPRAMRMAP_sep16' }); console.log(a.summary);
+    const a = await run('build_move_region', { base: LIVE, name: 'E2E_move', ...T, region: REGION, anchor: P + '_sep16' }); console.log(a.summary);
     ok(/stations 37 /.test(a.summary) && /ALL CHECKS PASS/.test(a.summary), 'move region: 37 stations moved, all checks pass');
-    const b = await run('build_merge_box', { base: 'E2E_move', donor: 'SPRAMRMAP_v3_orig', name: 'E2E_final', x0: 9, x1: 31, y0: 29.5, y1: 42 });
+    const b = await run('build_merge_box', { base: 'E2E_move', donor: P + '_v3_orig', name: 'E2E_final', x0: 9, x1: 31, y0: 29.5, y1: 42 });
     ok(/removed 10766, added 12976/.test(b.summary), 'merge box: same wall counts as the original v5 build');
     const c = await run('check_candidate', { base: LIVE, candidate: 'E2E_final' }); console.log(c.summary); ok(c.data.allOk, 'rebuilt candidate passes every check against the live map');
     const d = await run('compare_maps', { a: V5, b: 'E2E_final' }); console.log(d.summary);
@@ -70,8 +71,8 @@ const steps = {
     const e = await run('check_candidate', { base: LIVE, candidate: V5 }); ok(!e.data.allOk && e.data.nearLines.some(n => n.path === 'LM514-LM515'), 'the check catches the feature line left on LM514-LM515 in the delivered v5');
     const f = await run('build_remove_lines', { base: V5, name: 'E2E_nolines', fromCheck: true, checkAgainst: LIVE }); ok(/ALL CHECKS PASS/.test(f.summary), 'removing the reported line from v5 gives a file that passes: ' + f.summary.split('\n')[2]);
     const g = await run('replay', { drive: D6, map: 'E2E_final' }); ok(/JUMPS[^\n]*: 0/.test(g.summary), 'replay through the rebuilt candidate: no jump');
-    const dup = await run('build_merge_box', { base: 'E2E_move', donor: 'SPRAMRMAP_v3_orig', name: 'E2E_final', x0: 9, x1: 31, y0: 29.5, y1: 42 }).then(() => '', e => e.message); ok(/already exists/.test(dup), 'a candidate is never overwritten: ' + dup);
-    const src = await run('build_merge_box', { base: 'E2E_move', donor: 'SPRAMRMAP_v3_orig', name: LIVE, x0: 9, x1: 31, y0: 29.5, y1: 42 }).then(() => '', e => e.message); ok(/already exists/.test(src), 'a source map name cannot be used for a candidate: ' + src);
+    const dup = await run('build_merge_box', { base: 'E2E_move', donor: P + '_v3_orig', name: 'E2E_final', x0: 9, x1: 31, y0: 29.5, y1: 42 }).then(() => '', e => e.message); ok(/already exists/.test(dup), 'a candidate is never overwritten: ' + dup);
+    const src = await run('build_merge_box', { base: 'E2E_move', donor: P + '_v3_orig', name: LIVE, x0: 9, x1: 31, y0: 29.5, y1: 42 }).then(() => '', e => e.message); ok(/already exists/.test(src), 'a source map name cannot be used for a candidate: ' + src);
     for (const n of ['E2E_move', 'E2E_final', 'E2E_nolines']) await fetch(base + '/api/delete-candidate', { method: 'POST', headers: H, body: JSON.stringify({ name: n }) });
   },
   async robot() {
