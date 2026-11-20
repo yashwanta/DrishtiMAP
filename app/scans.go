@@ -87,16 +87,47 @@ func (a *App) healthToken(c *Ctx) (fleet.Health, string, error) {
 	return h, tok, nil
 }
 
+// scanAccess decides how to ask this server for scans: without a sign-in when the server allows
+// that (remembered for this run), otherwise with the stored sign-in.
+func (a *App) scanAccess(c *Ctx) (fleet.Health, string, error) {
+	site := a.Site()
+	if site.HealthURL == "" {
+		return fleet.Health{}, "", fmt.Errorf("no AMR Health server is set for this workspace; enter its address in History sources")
+	}
+	h := fleet.Health{URL: site.HealthURL, Plant: site.Plant, Insecure: site.HealthInsecure}
+	a.mu.Lock()
+	open, known := a.hOpen[site.HealthURL]
+	a.mu.Unlock()
+	if !known {
+		_, err := h.Scans(c, "", "", time.Now().Add(-time.Minute), time.Now(), 1)
+		open = err == nil
+		if err != nil && !errors.Is(err, fleet.ErrSignIn) {
+			return h, "", err
+		}
+		a.mu.Lock()
+		if a.hOpen == nil {
+			a.hOpen = map[string]bool{}
+		}
+		a.hOpen[site.HealthURL] = open
+		a.mu.Unlock()
+	}
+	if open {
+		return h, "", nil
+	}
+	return a.healthToken(c)
+}
+
 func (a *App) forgetHealthToken() { a.mu.Lock(); a.hTok = ""; a.mu.Unlock() }
 
 // scanList reads the stored scans of a time range; near the box when one is given.
 func (a *App) scanList(c *Ctx, box *[4]float64, from, to time.Time, robot string) ([]fleet.Scan, error) {
-	h, tok, err := a.healthToken(c)
+	// first without a sign-in: a server that offers its scans to the plant network needs none
+	h, tok, err := a.scanAccess(c)
 	if err != nil {
 		return nil, err
 	}
 	scans, err := h.Scans(c, tok, robot, from, to, 5000)
-	if errors.Is(err, fleet.ErrSignIn) {
+	if errors.Is(err, fleet.ErrSignIn) && tok != "" {
 		a.forgetHealthToken()
 		if h, tok, err = a.healthToken(c); err == nil {
 			scans, err = h.Scans(c, tok, robot, from, to, 5000)
@@ -242,7 +273,7 @@ func (a *App) scanEvidence(c *Ctx, box [4]float64, mapName string, from, to time
 			inWalls = append(inWalls, p)
 		}
 	}
-	h, tok, err := a.healthToken(c)
+	h, tok, err := a.scanAccess(c)
 	if err != nil {
 		return nil, err
 	}

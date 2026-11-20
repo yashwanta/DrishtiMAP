@@ -5,7 +5,8 @@
 // Sign-in: user "tester", password "tester". Endpoints as in AMR Health 0.7.74:
 //   POST /api/auth/login   GET /api/amr/laser-scans   GET /api/amr/laser-scans/<id>
 const http = require('http'), fs = require('fs'), path = require('path');
-const [port, dir, nth = '5'] = process.argv.slice(2);
+const [port, dir, nth = '5', mode = ''] = process.argv.slice(2);
+const OPEN = mode === 'open';   // "open" = the scans are given without a sign-in, as on a server that offers them to the plant network
 const TOKEN = 'standin-' + Date.now();
 const ids = fs.readdirSync(dir).map(f => (f.match(/^loc_(\d+)\.json$/) || [])[1]).filter(Boolean).map(Number).sort((a, b) => a - b).filter((v, i) => i % +nth === 0);
 const pad = i => String(i).padStart(4, '0');
@@ -22,7 +23,7 @@ http.createServer((req, res) => {
     return;
   }
   if (u.pathname.startsWith('/api/amr/laser-scans')) {
-    if (req.headers.authorization !== 'Bearer ' + TOKEN) return send(401, { error: 'missing authorization token' });
+    if (!OPEN && req.headers.authorization !== 'Bearer ' + TOKEN) return send(401, { error: 'missing authorization token' });
     const id = u.pathname.split('/')[4];
     if (id) { const f = path.join(dir, 'laser_' + pad(+id) + '.json'); return fs.existsSync(f) ? send(200, fs.readFileSync(f, 'utf8')) : send(404, { error: 'no such scan' }); }
     const amr = u.searchParams.get('amr');

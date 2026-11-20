@@ -87,7 +87,9 @@ func (h Health) get(ctx context.Context, token, path string, limit int64) ([]byt
 	if err != nil {
 		return nil, 0, err
 	}
-	req.Header.Set("Authorization", "Bearer "+token)
+	if token != "" {
+		req.Header.Set("Authorization", "Bearer "+token)
+	}
 	res, err := h.client().Do(req)
 	if err != nil {
 		return nil, 0, healthErr(err)

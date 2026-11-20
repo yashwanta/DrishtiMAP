@@ -20,7 +20,7 @@ import (
 	"drishtimap/smap"
 )
 
-const Version = "1.6.1"
+const Version = "1.6.2"
 
 // Build details. The release build on GitHub fills them in (-ldflags -X); a build made on a PC
 // leaves them empty and the footer then says "local build".
@@ -71,7 +71,8 @@ type App struct {
 	drive  *driveEntry
 	rec    *recording
 
-	hTok, hTokURL string // AMR Health sign-in token of this run
+	hTok, hTokURL string          // AMR Health sign-in token of this run
+	hOpen         map[string]bool // servers that give their scans without a sign-in
 	hTokAt        time.Time
 }
 

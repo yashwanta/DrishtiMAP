@@ -8,6 +8,12 @@ To publish a version: change `Version` in `app\app.go`, add a section at the top
 `## <version> · <date> · by <your GitHub name>`, commit, then push a tag `v<version>`. GitHub builds the
 exe and publishes the release by itself, with your name and the list of commits on the release page.
 
+## 1.6.2 · 2026-11-20 · by yashwanta
+
+- Stored laser scans are asked for **without a sign-in first**. A sign-in is used only when the AMR
+  Health server itself requires one for its scans. On a server that offers them to the plant network,
+  nothing has to be entered.
+
 ## 1.6.1 · 2026-11-20 · by yashwanta
 
 - Stored scans: when none was taken near the box, the Evidence step now says how many scans AMR Health
