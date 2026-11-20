@@ -19,6 +19,7 @@ DRISHTI Map finds out why a laser map makes robots jump or lose their position, 
 
 | Situation | Go to |
 |---|---|
+| Something is wrong at a place: take it step by step to a tested map | [[WI-10]] |
 | First time: how do I use this program? | [[WI-00]] |
 | Set up a workspace, robots and a recording in detail | [[WI-01]] |
 | Robots jump or lose position at a place | [[WI-02]], then [[WI-03]] |

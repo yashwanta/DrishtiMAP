@@ -58,7 +58,7 @@ const steps = {
   },
   async help() {
     const l = await get('/api/help'); console.log(l.map(a => a.id + '  ' + a.title).join('\n'));
-    ok(l.length === 20 && l[0].id === 'README' && l.filter(a => a.group === 'Work instructions').length === 10 && l.filter(a => a.group === 'Knowledge base').length === 9, 'help lists the start page, 10 work instructions and 9 knowledge-base articles');
+    ok(l.length === 21 && l[0].id === 'README' && l.filter(a => a.group === 'Work instructions').length === 11 && l.filter(a => a.group === 'Knowledge base').length === 9, 'help lists the start page, 11 work instructions and 9 knowledge-base articles');
     const links = new Set(); let empty = 0;
     for (const a of l) { const t = (await get('/api/help?id=' + a.id)).text; if (t.length < 400) empty++; for (const m of t.matchAll(/\[\[([A-Z]+-?\d*)\]\]/g)) links.add(m[1]); }
     const ids = new Set(l.map(a => a.id)); const broken = [...links].filter(x => !ids.has(x));

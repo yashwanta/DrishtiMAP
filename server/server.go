@@ -204,6 +204,36 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		jsonOut(w, map[string]bool{"ok": true})
+	case "/api/cases":
+		jsonOut(w, map[string]any{"cases": a.Cases()})
+	case "/api/case":
+		if r.Method == "POST" {
+			b, err := io.ReadAll(io.LimitReader(r.Body, 5<<20))
+			if err == nil {
+				err = a.SaveCase(b)
+			}
+			if err != nil {
+				fail(w, 400, err)
+				return
+			}
+			jsonOut(w, map[string]bool{"ok": true})
+			return
+		}
+		b, err := a.Case(r.URL.Query().Get("id"))
+		if err != nil {
+			fail(w, 404, fmt.Errorf("no such case"))
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.Write(b)
+	case "/api/case/delete":
+		var q struct{ ID string }
+		body(r, &q)
+		if err := a.DeleteCase(q.ID); err != nil {
+			fail(w, 400, err)
+			return
+		}
+		jsonOut(w, map[string]bool{"ok": true})
 	case "/api/site":
 		if r.Method == "POST" {
 			var q app.Site

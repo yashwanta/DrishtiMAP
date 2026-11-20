@@ -2,7 +2,8 @@
 // reports any script error.   node tests/ui.js <url-with-token> <shot.png> [query] [js-to-run-after-load]
 const { spawn } = require('child_process');
 const fs = require('fs'), path = require('path'), os = require('os');
-const [url, shot, query = '', after = ''] = process.argv.slice(2);
+const [url, shot, query = '', after0 = ''] = process.argv.slice(2);
+const after = after0.startsWith('@') ? require('fs').readFileSync(after0.slice(1), 'utf8') : after0;   // @file = read the script from a file
 const EDGE = 'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe';
 const prof = path.join(os.tmpdir(), 'dm_edge_' + process.pid), port = 9300 + (process.pid % 500);
 const edge = spawn(EDGE, ['--headless=new', '--disable-gpu', '--no-first-run', '--remote-debugging-port=' + port, '--user-data-dir=' + prof, '--window-size=1560,960', 'about:blank'], { stdio: 'ignore' });
@@ -27,10 +28,11 @@ const done = code => { try { edge.kill(); } catch (e) { } setTimeout(() => { try
   await send('Runtime.enable'); await send('Log.enable'); await send('Page.enable');
   await send('Emulation.setDeviceMetricsOverride', { width: 1560, height: 960, deviceScaleFactor: 1, mobile: false });
   await send('Page.navigate', { url: url + (query ? '&' + query : '') });
-  const wantReady = /run=|hist=/.test(query);
+  const wantReady = /run=|hist=|gbox=/.test(query);
   let title = '';
   for (let i = 0; i < 480; i++) { await sleep(250); title = await evalJS('document.title'); if (wantReady ? title === 'DRISHTI Map ready' : (title === 'DRISHTI Map' && await evalJS("!!document.querySelector('#mapsList li')"))) break; }
   if (after) { console.log('after:', JSON.stringify(await evalJS(after))); await sleep(1500); }
+  if (after0.startsWith('@')) { for (let i = 0; i < 700 && !(await evalJS('!!window.__done')); i++) await sleep(500); console.log('result:', await evalJS('JSON.stringify(window.__done)')); await sleep(800); }   // a script file reports through window.__done
   await sleep(700);
   const info = await evalJS(`JSON.stringify({title:document.title, out:document.querySelector('#outTitle').textContent, outText:document.querySelector('#out').textContent.slice(0,300), maps:document.querySelectorAll('#mapsList li').length, drives:document.querySelectorAll('#driveList li').length, legend:document.querySelector('#legend').textContent, chat:document.querySelector('#chatLog').textContent.slice(0,600)})`);
   console.log(info);
@@ -40,4 +42,4 @@ const done = code => { try { edge.kill(); } catch (e) { } setTimeout(() => { try
   console.log(errors.length ? 'SCRIPT ERRORS:\n  ' + errors.join('\n  ') : 'no script errors');
   done(errors.length ? 1 : 0);
 })().catch(e => { console.error('ui test failed:', e.message); done(2); });
-setTimeout(() => { console.error('ui test timed out'); done(3); }, 170000);
+setTimeout(() => { console.error('ui test timed out'); done(3); }, after0.startsWith('@') ? 600000 : 170000);

@@ -15,3 +15,4 @@ release/
 shot*.png
 .claude/settings.local.json
 CLAUDE.local.md
+preview/

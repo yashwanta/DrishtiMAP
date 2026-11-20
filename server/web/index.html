@@ -18,8 +18,10 @@
   <button id="settingsBtn">Settings</button>
   <button id="helpBtn" title="Work instructions and knowledge base">Help</button>
 </header>
+<div id="gSteps"></div>
 <main>
   <aside id="left">
+    <h3>Cases <small>guided investigations</small></h3><ul id="caseList"></ul>
     <h3>Maps</h3><ul id="mapsList"></ul>
     <h3>Candidates <small>built here, not on any robot</small></h3><ul id="candList"></ul>
     <h3>Recordings</h3><ul id="driveList"></ul>
@@ -51,8 +53,9 @@
     <pre id="out">Pick a map on the left to see it. Pick a recording and a map, then use Tools on the right.</pre>
   </section>
   <aside id="right">
-    <div class="tabs"><button data-tab="tools" class="on">Tools</button><button data-tab="edit">Edit</button><button data-tab="chat">Assistant</button></div>
-    <div id="tab-tools" class="tab">
+    <div class="tabs"><button data-tab="guided" class="on">Guided</button><button data-tab="tools">Advanced</button><button data-tab="edit">Edit</button><button data-tab="chat">Assistant</button></div>
+    <div id="tab-guided" class="tab"></div>
+    <div id="tab-tools" class="tab hidden">
       <div class="sel"><label>Recording<select id="selDrive"></select></label>
         <label>Map<select id="selMap"></select></label>
         <label>Second map<select id="selMap2"></select></label>
@@ -183,5 +186,6 @@
 <script src="app.js"></script>
 <script src="edit.js"></script>
 <script src="scan.js"></script>
+<script src="guided.js"></script>
 </body>
 </html>

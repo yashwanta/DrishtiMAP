@@ -87,15 +87,21 @@ def trip(logdir, robot, a, b):
 def lane(logdir, x0, y0, x1, y1, a, b, step):
     fs = log_files(logdir, a, b)
     print('H\t%d' % len(fs))
+    # when a map was pushed to the fleet: the scene files beside the history carry the time in their name
+    for f in sorted(glob.glob(os.path.join(os.path.dirname(logdir.rstrip('/')), 'scenes', '*.scene'))):
+        print('S\t%s' % os.path.basename(f)[:19])
     passes = {}
+    seenc = set()
+    allr = {}  # robot -> [moving samples, sum of confidence, last x, last y] over the whole plant
 
     def close(v):
         p = passes.pop(v, None)
         if not p or p['n'] < 2:
             return
-        print('L\t%s\t%s\t%s\t%d\t%.2f\t%.2f\t%d\t%d\t%s\t%s' % (
+        print('L\t%s\t%s\t%s\t%d\t%.2f\t%.2f\t%d\t%d\t%s\t%s\t%.2f\t%.2f\t%.2f\t%.2f' % (
             p['t0'], v, p['t1'], p['n'] * step, min(p['c']), sum(p['c']) / len(p['c']),
-            p['still'] * step, p['reloc'], p['map'], ','.join(str(c) for c in sorted(p['codes'], key=str))))
+            p['still'] * step, p['reloc'], p['map'], ','.join(str(c) for c in sorted(p['codes'], key=str)),
+            p['lx'] - p['x0'], p['ly'] - p['y0'], p['mx'], p['my']))
 
     i = 0
     for t, d in lines(fs):
@@ -108,6 +114,14 @@ def lane(logdir, x0, y0, x1, y1, a, b, step):
             x, y = k.get('x'), k.get('y')
             if x is None or y is None:
                 continue
+            c = k.get('confidence') or 0
+            g = allr.get(v)
+            if g is None:
+                g = allr[v] = [0, 0.0, x, y]
+            elif abs(x - g[2]) + abs(y - g[3]) > 0.05:
+                g[0] += 1
+                g[1] += c
+            g[2], g[3] = x, y
             if not (x0 <= x <= x1 and y0 <= y <= y1):
                 if v in passes:
                     passes[v]['miss'] += 1
@@ -117,22 +131,32 @@ def lane(logdir, x0, y0, x1, y1, a, b, step):
             p = passes.get(v)
             if p is None:
                 p = passes[v] = {'t0': t, 'n': 0, 'c': [], 'still': 0, 'reloc': 0, 'map': clean(k.get('current_map') or ''),
-                                 'codes': set(), 'miss': 0, 'lx': x, 'ly': y}
+                                 'codes': set(), 'miss': 0, 'lx': x, 'ly': y, 'x0': x, 'y0': y, 'mx': x, 'my': y, 'mc': 9, 'px': 1e9, 'py': 1e9}
             elif abs(x - p['lx']) < 0.02 and abs(y - p['ly']) < 0.02:
                 p['still'] += 1
             p['miss'] = 0
             p['t1'] = t
             p['n'] += 1
-            p['c'].append(k.get('confidence') or 0)
+            p['c'].append(c)
             p['lx'], p['ly'] = x, y
+            if c < p['mc']:
+                p['mc'], p['mx'], p['my'] = c, x, y
+            if abs(x - p['px']) + abs(y - p['py']) > 0.3:   # a point to draw
+                p['px'], p['py'] = x, y
+                print('A\t%s\t%.2f\t%.2f\t%.2f' % (v, x, y, c))
             if k.get('reloc_status') not in (1, None):
                 p['reloc'] += 1
             for lvl in ('fatals', 'errors'):
                 for e in k.get(lvl) or []:
                     if isinstance(e, dict) and e.get('code') is not None:
                         p['codes'].add(e.get('code'))
+                        if e.get('code') not in seenc:
+                            seenc.add(e.get('code'))
+                            print('C\t%s\t%s' % (e.get('code'), clean(e.get('desc') or '')[:240]))
     for v in list(passes):
         close(v)
+    for v in sorted(x for x in allr if x):
+        print('G\t%s\t%d\t%.1f' % (v, allr[v][0], allr[v][1]))
 
 
 if __name__ == '__main__':

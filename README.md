@@ -71,6 +71,13 @@ as a before/after record.
 Connect an AI model (Claude, any OpenAI-compatible server, or a local model) and ask "why does AMR-03 jump near
 LM520?". The assistant runs the same tools and explains the result. Every tool also works without a model.
 
+**Work a problem step by step.**
+The Guided tab takes one trouble spot through eight steps: draw a box and pick a time; see what every robot did
+there; get a verdict (the place, one robot, one robot's scanner, a map change, one-off events) with a rating that
+comes from the number of robots and passes; lay laser recordings over the map versions; choose a fix that fits the
+evidence; build and prove it; judge the trial on one AMR; confirm the roll-out and compare before with after. Each
+investigation is saved as a case.
+
 **Find out what happened earlier, when nobody was recording.**
 Pick a robot and a time range and the app reads the fleet manager's own history, second by second: where the
 robot drove, every stop, position jump, relocalisation and error, and whether the connection stalled. It then
@@ -78,7 +85,7 @@ checks how every other robot did in the same place over the last days, which tel
 problem with one robot, and it lists the Wi-Fi events of those minutes. Read-only, through your own login.
 
 **Train people on the method.**
-The Help window holds 10 work instructions and 9 knowledge-base articles: how a robot uses a map, what each symptom
+The Help window holds 11 work instructions and 9 knowledge-base articles: how a robot uses a map, what each symptom
 usually means, how to read the numbers, and a full worked case.
 
 ## Who it is for
@@ -100,11 +107,12 @@ first trial. The app turns that method into buttons, so the next case takes hour
 | Step | Button (Tools tab) | What you get |
 |---|---|---|
 | Find what is wrong | **Detect with Recording**, **Detect (map file only)** | every finding marked on the map: jumps, low wall match, feature lines on paths, broken links |
+| Something is wrong at a place | **Guided** tab | eight steps from "which robots, where, when" to a fixed map tried on one AMR; saved as a case |
 | A robot stopped or was off position earlier | **What happened?** (Tools tab, Past event) | the trip from the fleet manager's history: stops, jumps, relocalisations, errors, connection stalls; the same place for every other robot; Wi-Fi events. Read-only |
 | Are all robots on the same map | **Check maps on all robots** (left panel) | each robot's current map and checksum, the ones that differ flagged; optional download |
 | Change a map by hand | **Edit** tab | delete feature lines, erase / move / take walls, set path direction or speed, move / add / delete stations and paths; saved as a checked candidate |
 | See the LiDAR data | **LiDAR · what each scanner sees** (Tools tab) | one scan at a time from a recording, or live from a robot; each scanner in its own colour with the height of its scan plane |
-| Learn the method | **Help** (top right) | 10 work instructions (WI) and 9 knowledge-base articles (KB), also readable by the assistant |
+| Learn the method | **Help** (top right) | 11 work instructions (WI) and 9 knowledge-base articles (KB), also readable by the assistant |
 | Record a drive | robot → **rec** | position, confidence and lasers every 0.7 s, read-only |
 | Copy the robot's map | robot → **map** | the map the robot is using now, into `maps\` |
 | What the robot reported | **Recording summary** | stations, confidence, jumps, abnormal localisation states |
@@ -148,6 +156,7 @@ workspace\
   drives\       recordings (loc_NNNN.json, laser_NNNN.json, locb_NNNN.json)
   results\      saved text and pictures
   robots.json   name + IP of robots (read-only access)
+  cases\        one file per guided investigation
   site.json     fleet manager login and AMR Health address for "What happened?" (optional)
 ```
 

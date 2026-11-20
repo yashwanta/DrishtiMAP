@@ -140,7 +140,7 @@ function paint() {
   const d = S.draw; ctx.lineWidth = 2 * dp; ctx.strokeStyle = '#f5a623'; ctx.fillStyle = '#f5a62322';
   if (d.poly.length) { ctx.beginPath(); d.poly.forEach((p, i) => ctx[i ? 'lineTo' : 'moveTo'](X(p[0]), Y(p[1]))); if (d.mode !== 'poly') ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.fillStyle = '#f5a623'; for (const p of d.poly) ctx.fillRect(X(p[0]) - 3 * dp, Y(p[1]) - 3 * dp, 6 * dp, 6 * dp); }
   if (d.box) { const b = d.box; ctx.strokeStyle = '#38bdf8'; ctx.fillStyle = '#38bdf822'; ctx.beginPath(); ctx.rect(X(b[0]), Y(b[1]), X(b[2]) - X(b[0]), Y(b[3]) - Y(b[1])); ctx.fill(); ctx.stroke(); }
-  paintScan(dp); paintExtra(dp);
+  paintScan(dp); paintExtra(dp); if (typeof paintGuided === 'function') paintGuided(dp);
   const lg = []; if (S.A) lg.push(['#c9ced6', S.A.name + (S.ed ? ' (being edited)' : '')]); if (S.B) lg.push(['#3b82f6', S.B.name]); if (o.cloud && L.lasers) lg.push(['#ef4444', 'recorded lasers']); if (o.rows && L.track) lg.push(['#4ade80', 'wall match ≥55 %'], ['#facc15', '40–55 %'], ['#f87171', '<40 %']); if (o.track && L.track) lg.push(['#4ade80', 'confidence ≥0.7'], ['#facc15', '0.5–0.7'], ['#f87171', '<0.5'], ['#22d3ee', 'reflector mode']);
   $('#legend').replaceChildren(...lg.flatMap(([c, t]) => [el('i', { style: 'background:' + c }), t])); $('#legend').classList.toggle('hidden', !lg.length);
 }
@@ -330,7 +330,7 @@ for (const b of $$('.tabs button')) b.onclick = () => { for (const x of $$('.tab
 (async () => {
   if (new URLSearchParams(location.search).get('helpwin')) return;   // Help-only window (see edit.js)
   try {
-    await refresh(); loadChat(true); pollRec();
+    await refresh(); loadChat(true); pollRec(); if (typeof gStart === 'function') gStart();
     // optional start-up links (used by the tests): ?map=NAME&map2=NAME&drive=NAME&run=TOOL&tab=chat
     const q = new URLSearchParams(location.search);
     if (q.get('drive')) { S.drive = q.get('drive'); $('#selDrive').value = S.drive; }
@@ -343,9 +343,10 @@ for (const b of $$('.tabs button')) b.onclick = () => { for (const x of $$('.tab
     if (q.get('pick')) { const v = q.get('pick').split(',').map(Number); edClick(X(v[0]), Y(v[1])); }
     if (q.get('help')) await openHelp(q.get('help'));
     if (q.get('scan')) await scanLoad(+q.get('scan'), true);
+    if (q.get('gbox')) await gAuto(q);
     if (q.get('hist')) { const v = q.get('hist').split(','); $('#histRobot').value = v[0]; $('#histFrom').value = v[1]; $('#histTo').value = v[2]; $('#histCmp').checked = v[3] !== '0'; await $('#histGo').onclick(); }
     if (!S.ws.maps.length && !S.ws.candidates.length && !S.ws.drives.length && !location.search.includes('help=')) openHelp('README');   // first start on an empty workspace
-    refreshMarks(); document.title = 'DRISHTI Map' + (q.get('run') || q.get('hist') ? ' ready' : '');
+    refreshMarks(); document.title = 'DRISHTI Map' + (q.get('run') || q.get('hist') || q.get('gbox') ? ' ready' : '');
   } catch (e) { out('Start', e.message); }
   draw();
 })();

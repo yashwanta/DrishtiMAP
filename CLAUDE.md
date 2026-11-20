@@ -37,6 +37,7 @@ map file, and checks it before any robot sees it. An AI model is optional; every
 | `mapedit` | move region, merge box, hand edits (`edit.go`), checks (`check.go`), compare, detector (`detect.go`) |
 | `lasertrack` | laser track, stretch replay, rigid fit, pieces, measure turn, per-scanner scans (`scan.go`) |
 | `seer` | read-only robot client |
+| guided workflow | `server\web\guided.js` (eight steps, cases), `fleet\area.go` (area verdict), `app\area.go` + `app\evidence.go` (tools `area_report`, `box_evidence`, `trial_result`, cases). Page test: `tests\guided_flow.js` |
 | `fleet` | past events: fleet manager history over the user's ssh login (`history.py` runs there, read-only), trip analysis, comparison with other robots, Wi-Fi history from AMR Health |
 | `app` | workspace, job runner, the tools (`tools.go`, `tools2.go`, `scan.go`), key storage |
 | `ai` | Claude (official Go SDK v2) and OpenAI-compatible connections, system prompt, connection test |

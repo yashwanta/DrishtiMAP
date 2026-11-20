@@ -77,7 +77,7 @@ func (s Source) run(ctx context.Context, prog func(done, total int), args ...str
 	remote := "python3 - " + strings.Join(args, " ")
 	cmd := exec.CommandContext(ctx, ssh, "-o", "BatchMode=yes", "-o", "ConnectTimeout=12", "-o", "ServerAliveInterval=15", "-T", s.SSH, remote)
 	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true, CreationFlags: 0x08000000} // no console window
-	cmd.Stdin = bytes.NewReader(bytes.ReplaceAll(script, []byte("\r"), nil)) // a Windows checkout may add CRs
+	cmd.Stdin = bytes.NewReader(bytes.ReplaceAll(script, []byte("\r"), nil))            // a Windows checkout may add CRs
 	var stderr bytes.Buffer
 	cmd.Stderr = &stderr
 	out, err := cmd.StdoutPipe()
@@ -258,6 +258,8 @@ type Pass struct {
 	Reloc   int
 	Map     string
 	Codes   []string // error codes seen
+	DX, DY  float64  // where it left the box minus where it entered (direction of travel)
+	MX, MY  float64  // where its confidence was lowest
 }
 
 // ParseLane reads the lines printed by history.py in lane mode.
@@ -271,6 +273,9 @@ func ParseLane(lines []string) []Pass {
 		p := Pass{T0: pt(f[1]), Robot: f[2], T1: pt(f[3]), Seconds: pi(f[4]), MinConf: pf(f[5]), AvgConf: pf(f[6]), Still: pi(f[7]), Reloc: pi(f[8]), Map: f[9]}
 		if f[10] != "" {
 			p.Codes = strings.Split(f[10], ",")
+		}
+		if len(f) >= 15 {
+			p.DX, p.DY, p.MX, p.MY = pf(f[11]), pf(f[12]), pf(f[13]), pf(f[14])
 		}
 		out = append(out, p)
 	}
