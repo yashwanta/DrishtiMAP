@@ -104,6 +104,7 @@ function gS4() {
   const robots = S.ws.robots.map(r => `<option${r.name === (G.recRobot || G.robot) ? ' selected' : ''}>${esc(r.name)}</option>`).join('');
   return `<h2>④ Evidence</h2>
   <p>Steps 1 to 3 showed <b>that</b> robots have trouble here. This step finds <b>which walls</b> are wrong, so a fix can be built. For that it needs laser scans taken inside the box. They are not collected all the time: a recording has to be made.</p>
+  ${gScanCard()}
   <div class="gcard"><b>A · Recordings that drive through this box</b>
    ${!src ? '<p class="dim">Looking at the recordings …</p>' : cover.length ? cover.map(d => `<label class="row"><input type="checkbox" class="gDrive" value="${esc(d.name)}"${(G.drives ? G.drives.includes(d.name) : true) ? ' checked' : ''}><span>${esc(d.name)}<br><small class="dim">${d.passes} pass${d.passes > 1 ? 'es' : ''}${d.dir ? ', heading ' + esc(d.dir) : ''}, lowest confidence ${d.min.toFixed(2)}, ${esc(d.when)}</small></span></label>`).join('') : '<p class="bad">No recording covers this box yet.</p>'}
    ${rest ? `<span class="dim">${rest} other recording${rest > 1 ? 's do' : ' does'} not drive through the box and cannot be used here.</span>` : ''}
@@ -121,19 +122,47 @@ function gS4() {
    <div class="gcard"><b>${esc(G.map)} in this box</b><div class="gkv"><span><i style="background:#4ade80"></i>walls seen by the lasers</span><span>${e.seenPct.toFixed(0)} %</span><span><i style="background:#f87171"></i>walls not seen (gone, or hidden)</span><span>${e.unseenPct.toFixed(0)} %</span>
     <span><i style="background:#60a5fa"></i>seen ${e.drives > 1 ? 'in every recording' : ''}, not in the map</span><span>${e.always} cells</span>${e.drives > 1 ? `<span><i style="background:#e879f9"></i>seen in some recordings only</span><span>${e.sometimes} cells</span>` : ''}</div>
     ${e.drives < 2 ? '<span class="dim">With one recording a parked bin and a new wall look the same. A second recording at another time tells them apart.</span>' : ''}</div>
-   <div class="gcard verdict ${(G.jumps || []).length ? 'v-map' : 'v-ok'}"><b>Position jumps along the recording: ${(G.jumps || []).length}</b><p>${(G.jumps || []).length ? esc(G.jumps.map(j => j.step.toFixed(2) + ' m near ' + j.near).join('; ')) + '. A jump means a whole piece of the map sits in the wrong place. A box cannot fix that: the next step offers the piece move.' : 'The map does not make the robot jump on this recording. No piece of the map is misplaced along it.'}</p></div>` : ''}
+   ${G.evFrom === 'scans' ? '<div class="gcard"><b>Position jumps: not checked</b><p>This came from single stored scans. A single scan cannot show a position jump or a misplaced piece of map: for that, record a drive in part A and press Compare in part B.</p></div>' : ''}
+   <div class="gcard verdict ${(G.jumps || []).length ? 'v-map' : 'v-ok'}${G.evFrom === 'scans' ? ' hidden' : ''}"><b>Position jumps along the recording: ${(G.jumps || []).length}</b><p>${(G.jumps || []).length ? esc(G.jumps.map(j => j.step.toFixed(2) + ' m near ' + j.near).join('; ')) + '. A jump means a whole piece of the map sits in the wrong place. A box cannot fix that: the next step offers the piece move.' : 'The map does not make the robot jump on this recording. No piece of the map is misplaced along it.'}</p></div>` : ''}
   ${gNav('Fix options', !!e)}`;
+}
+function gScanCard() {
+  const sc = G.scans, se = G.scanEv;
+  return `<div class="gcard"><b>Recorded automatically by the apps server</b>
+   <p class="dim">AMR Health stores laser scans from the robots named in its settings, at regular sample times and whenever a robot has a problem. Nobody has to record. DRISHTI Map reads them from the server (read-only).</p>
+   <div class="row">last <select id="gScanH">${[24, 48, 72, 168].map(h => `<option value="${h}"${(G.scanH || 48) === h ? ' selected' : ''}>${h < 72 ? h + ' hours' : h / 24 + ' days'}</option>`).join('')}</select><button class="${sc ? '' : 'primary'}" data-act="scans">Look for stored scans</button><button data-act="hlogin" title="The AMR Health user name and password, kept encrypted for this Windows user">Sign in …</button></div>
+   ${sc ? (sc.total ? '<table class="gt"><tr><th></th><th>robot</th><th>scans near the box</th><th>usable</th><th>at low confidence</th><th>newest</th></tr>' + sc.robots.map(r => `<tr><td><input type="checkbox" class="gScanRobot" value="${esc(r.robot)}" checked></td><td>${esc(r.robot)}</td><td>${r.scans}</td><td>${r.usable}</td><td>${r.low || ''}</td><td class="dim">${esc(r.newest)}</td></tr>`).join('') + '</table><div class="row"><button class="primary" data-act="scanev">Compare the stored scans with the map</button></div>' : '<p class="warn">No stored scan near this box in that time. Scans exist only for the robots named in the AMR Health settings, and only where such a robot was at a sample time or had a problem.</p>') : ''}
+   ${se ? '<table class="gt"><tr><th>robot</th><th>scans</th><th>laser points on a wall</th><th>moved from stored position</th></tr>' + se.robots.map(r => `<tr><td>${esc(r.robot)}${r.odd ? ' <span class="bad">check scanners</span>' : ''}</td><td>${r.scans}</td><td class="${r.odd ? 'bad' : r.match >= 55 ? 'ok' : 'warn'}">${r.match.toFixed(0)} %</td><td>${r.moved.toFixed(2)} m</td></tr>`).join('') + '</table><span class="dim">' + (se.robots.length < 3 ? 'Fewer than 3 robots: the scanners cannot be compared with each other yet.' : se.robots.some(r => r.odd) ? 'A robot clearly below the others sees the same place worse: look at its scanners (clean, level, height).' : 'The robots agree with each other: no scanner stands out.') + ' The walls are coloured on the map; the numbers are below.</span>' : ''}</div>`;
+}
+function gHealthLogin(then) {
+  const [l1, u] = field('AMR Health user name', { autocomplete: 'off' }), [l2, pw] = field('Password', { type: 'password', autocomplete: 'off' });
+  api('/api/health-login').then(r => { if (r.user) u.value = r.user; note.textContent = (r.server ? 'Server: ' + r.server + '. ' : 'No AMR Health server is set yet: enter it in History sources first. ') + 'The password is kept encrypted for this Windows user on this PC and is sent only to that server.'; }).catch(() => { });
+  const note = el('p', {});
+  dialog('Sign in to AMR Health (to read stored laser scans)', el('div', {}, l1, l2, note), 'Sign in', async () => { await post('/api/health-login', { user: u.value.trim(), pass: pw.value }); toast('Signed in to AMR Health'); if (then) then(); });
+}
+async function gScans() {
+  G.scanH = +$('#gScanH').value; G.scanEv = null;
+  const r = await gRun('stored_scans', { box: G.box, hours: G.scanH }, () => gScans()); if (!r) return;
+  G.scans = r.data; out('stored scans', r.summary); gRender(); gSave();
+}
+async function gScanEvidence() {
+  const robots = $$('.gScanRobot:checked').map(c => c.value); if (!robots.length) return out('guided', 'Tick at least one robot.');
+  const r = await gRun('scan_evidence', { box: G.box, map: G.map, hours: G.scanH || 48, robots }, () => gScanEvidence()); if (!r) return;
+  const d = r.data; G.evPts = { seen: f32(d.ptsSeen), unseen: f32(d.ptsUnseen), always: f32(d.ptsAlways), sometimes: f32(d.ptsSometimes) };
+  G.ev = { fits: d.fits, bestOther: '', seenPct: d.seenPct, unseenPct: d.unseenPct, always: d.always, sometimes: d.sometimes, drives: d.scans }; G.evFrom = 'scans'; G.jumps = [];
+  G.scanEv = { robots: d.robots, scans: d.scans }; out('stored scans against the map', r.summary); gRender(); gSave();
 }
 async function gSources() {
   if (!G.box || !G.map) return; G.src = { loading: true }; gRender();
   const r = await gRun('box_sources', { box: G.box, map: G.map }); G.src = r ? r.data : null; if (r) out('evidence sources', r.summary); gRender(); if (r) gSave();
+  try { const hl = await api('/api/health-login'); if (hl.user && hl.server && !G.scans && G.step === 3) await gScans(); } catch (e) { }
 }
 async function gEvidence() {
   G.drives = $$('.gDrive:checked').map(c => c.value); G.vers = $$('.gVer:checked').map(c => c.value).slice(0, 5);
   if (!G.drives.length) return out('guided', 'Tick at least one recording that drives through the box, or record one.');
   const r = await gRun('box_evidence', { box: G.box, drives: G.drives, maps: [G.map, ...G.vers] }); if (!r) return;
   const d = r.data; G.evPts = { seen: f32(d.ptsSeen), unseen: f32(d.ptsUnseen), always: f32(d.ptsAlways), sometimes: f32(d.ptsSometimes) };
-  G.ev = { fits: d.fits, bestOther: d.bestOther, seenPct: d.seenPct, unseenPct: d.unseenPct, always: d.always, sometimes: d.sometimes, drives: d.drives }; G.evText = r.summary;
+  G.ev = { fits: d.fits, bestOther: d.bestOther, seenPct: d.seenPct, unseenPct: d.unseenPct, always: d.always, sometimes: d.sometimes, drives: d.drives }; G.evText = r.summary; G.evFrom = 'drives';
   G.jumps = []; let txt = r.summary;
   for (const dn of G.drives.slice(0, 3)) { const p = await gRun('replay', { drive: dn, map: G.map }); if (!p) continue; for (const s of (p.data.stretches || [])) if (s.Step >= 0.5 && !s.Ambiguous && !s.TrackBreak) G.jumps.push({ drive: dn, step: s.Step, near: s.Near, x: s.X, y: s.Y }); txt += '\n\n' + p.summary; }
   out('laser evidence', txt); gRender(); gSave();
@@ -272,10 +301,10 @@ function gS8() {
 }
 
 let gBusy = false;
-async function gRun(tool, args) {
+async function gRun(tool, args, retry) {
   if (gBusy || busy) { toast('Another analysis is still running.'); return null; }
   gBusy = true; busy = true; for (const b of $$('#tab-guided button')) b.disabled = true;
-  try { return await run(tool, args); } catch (e) { out(tool.replace(/_/g, ' ') + ' — did not run', e.message); return null; }
+  try { return await run(tool, args); } catch (e) { if (/sign in to AMR Health/i.test(e.message)) { out('AMR Health', 'Sign in to AMR Health to read the stored laser scans.'); setTimeout(() => gHealthLogin(retry), 50); } else out(tool.replace(/_/g, ' ') + ' — did not run', e.message); return null; }
   finally { gBusy = false; busy = false; for (const b of $$('#tab-guided button')) b.disabled = false; }
 }
 $('#tab-guided').addEventListener('click', async ev => {
@@ -292,6 +321,9 @@ $('#tab-guided').addEventListener('click', async ev => {
     case 'rec': G.recRobot = $('#gRecRobot').value; return recordDlg(G.recRobot);
     case 'sources': await refresh(); return gSources();
     case 'arm': { G.recRobot = $('#gRecRobot').value; const nm = G.recRobot.replace(/[^A-Za-z0-9_-]/g, '') + '_box_' + stamp(); const r = await gRun('record_arm', { robot: G.recRobot, name: nm, box: G.box }); if (!r) return; out('armed recording', r.summary); G.armed = 'Armed for ' + G.recRobot + ': it is recorded when it drives through the box. Keep this window open.'; gRender(); pollRec(); gArmWatch(); return; }
+    case 'scans': return gScans();
+    case 'scanev': return gScanEvidence();
+    case 'hlogin': return gHealthLogin();
     case 'pieces': return gPieces();
     case 'measure': return gMeasure();
     case 'region': if (!S.A) return; G.pc.anchor = $('#gPcAnchor').value; $('#polyBtn').click(); gWaitPoly(); return;

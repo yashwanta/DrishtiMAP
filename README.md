@@ -78,6 +78,11 @@ comes from the number of robots and passes; lay laser recordings over the map ve
 evidence; build and prove it; judge the trial on one AMR; confirm the roll-out and compare before with after. Each
 investigation is saved as a case.
 
+**Use laser scans nobody had to record.**
+When the plant's AMR Health server collects laser scans, the Evidence step reads them by itself, places each one on
+the map, and compares the robots with each other: a robot whose scanner is off stands out, because it matches the
+same walls worse than the rest.
+
 **Find out what happened earlier, when nobody was recording.**
 Pick a robot and a time range and the app reads the fleet manager's own history, second by second: where the
 robot drove, every stop, position jump, relocalisation and error, and whether the connection stalled. It then

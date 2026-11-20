@@ -234,6 +234,19 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		jsonOut(w, map[string]bool{"ok": true})
+	case "/api/health-login":
+		if r.Method == "POST" {
+			var q struct{ User, Pass string }
+			if err := body(r, &q); err != nil {
+				fail(w, 400, err)
+				return
+			}
+			if err := a.SaveHealthLogin(&app.Ctx{Context: r.Context(), App: a}, q.User, q.Pass); err != nil {
+				fail(w, 400, err)
+				return
+			}
+		}
+		jsonOut(w, map[string]string{"user": a.HealthLoginUser(), "server": a.Site().HealthURL})
 	case "/api/site":
 		if r.Method == "POST" {
 			var q app.Site

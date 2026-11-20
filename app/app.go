@@ -20,7 +20,7 @@ import (
 	"drishtimap/smap"
 )
 
-const Version = "1.5.0"
+const Version = "1.6.0"
 
 // Build details. The release build on GitHub fills them in (-ldflags -X); a build made on a PC
 // leaves them empty and the footer then says "local build".
@@ -47,6 +47,8 @@ type Config struct {
 	Workspace string     `json:"workspace"`
 	Providers []Provider `json:"providers"`
 	Active    string     `json:"activeProvider"`
+	// AMR Health sign-ins, one per server address; the password is encrypted for this Windows user
+	HealthLogins map[string]HealthLogin `json:"healthLogins,omitempty"`
 }
 
 // Robot is an entry of the workspace's robot list.
@@ -68,6 +70,9 @@ type App struct {
 	maps   map[string]*mapEntry
 	drive  *driveEntry
 	rec    *recording
+
+	hTok, hTokURL string // AMR Health sign-in token of this run
+	hTokAt        time.Time
 }
 
 type mapEntry struct {

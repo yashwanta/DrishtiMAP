@@ -296,3 +296,13 @@ func parallelDo(n int, f func(i int)) {
 	}
 	wg.Wait()
 }
+
+// ParseLaser turns one laser reply of a robot (status query 1009, as stored in a recording or by
+// the AMR Health server) into points in the robot frame, and says how many scanners answered.
+func ParseLaser(b []byte) ([]smap.Pt, int, error) {
+	var las laserMsg
+	if err := json.Unmarshal(b, &las); err != nil {
+		return nil, 0, err
+	}
+	return robotPts(&las), len(las.Lasers), nil
+}

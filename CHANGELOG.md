@@ -8,6 +8,22 @@ To publish a version: change `Version` in `app\app.go`, add a section at the top
 `## <version> · <date> · by <your GitHub name>`, commit, then push a tag `v<version>`. GitHub builds the
 exe and publishes the release by itself, with your name and the list of commits on the release page.
 
+## 1.6.0 · 2026-11-20 · by yashwanta
+
+- **Laser scans recorded automatically are read from the apps server.** When the workspace names an
+  AMR Health server (version 0.7.74 or newer), the Evidence step looks there by itself for laser scans
+  taken near the box: per robot how many there are, how many are usable, and how many were taken at
+  low confidence.
+- **Compare the stored scans with the map**: each scan is placed on the map (starting from the stored
+  position and fitting it to the walls), then the step shows which walls were seen, what is seen that is
+  not in the map, and **each robot's match against the map**. A robot clearly below the others is
+  flagged for its scanners.
+- **Sign in once.** The AMR Health user name and password are asked the first time and kept encrypted
+  for the Windows user, like the AI keys. They are sent only to the server named in the workspace.
+- A single stored scan cannot show a position jump or a misplaced piece; the step says so and still
+  asks for a recorded drive for that.
+- New tools for the assistant: `stored_scans`, `scan_evidence`.
+
 ## 1.5.0 · 2026-11-20 · by yashwanta
 
 - **Evidence step rebuilt.** It now says what it is for, lists only the recordings that really drive
