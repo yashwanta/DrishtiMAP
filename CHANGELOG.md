@@ -8,6 +8,11 @@ To publish a version: change `Version` in `app\app.go`, add a section at the top
 `## <version> · <date> · by <your GitHub name>`, commit, then push a tag `v<version>`. GitHub builds the
 exe and publishes the release by itself, with your name and the list of commits on the release page.
 
+## 1.6.4 · 2026-11-20 · by yashwanta
+
+- When the AMR Health server is restarting, the Evidence step now says so and asks to try again in a
+  few minutes, instead of "answered 502".
+
 ## 1.6.3 · 2026-11-20 · by yashwanta
 
 - Evidence step: when **Fix options** cannot be pressed yet, the step says why (no laser evidence for

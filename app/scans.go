@@ -102,7 +102,7 @@ func (a *App) scanAccess(c *Ctx) (fleet.Health, string, error) {
 		_, err := h.Scans(c, "", "", time.Now().Add(-time.Minute), time.Now(), 1)
 		open = err == nil
 		if err != nil && !errors.Is(err, fleet.ErrSignIn) {
-			return h, "", err
+			return h, "", err // not remembered: the server may just be restarting
 		}
 		a.mu.Lock()
 		if a.hOpen == nil {

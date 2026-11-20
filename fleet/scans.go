@@ -70,6 +70,8 @@ func (h Health) Login(ctx context.Context, user, pass string) (string, error) {
 		return "", fmt.Errorf("AMR Health did not accept that user name and password")
 	case res.StatusCode == 429:
 		return "", fmt.Errorf("AMR Health says: too many sign-in attempts; wait a few minutes")
+	case res.StatusCode == 502 || res.StatusCode == 503 || res.StatusCode == 504:
+		return "", errStarting
 	case res.StatusCode != 200:
 		return "", fmt.Errorf("AMR Health answered %d to the sign-in", res.StatusCode)
 	}
@@ -99,6 +101,9 @@ func (h Health) get(ctx context.Context, token, path string, limit int64) ([]byt
 	return b, res.StatusCode, err
 }
 
+// errStarting: the web server in front of AMR Health answers, but AMR Health itself does not yet.
+var errStarting = fmt.Errorf("the AMR Health server is not answering right now: it is most likely restarting (after a restart it can take 5 to 15 minutes before it answers again). Nothing is wrong with this box or with the scans. Try again in a few minutes")
+
 // ErrSignIn means the stored sign-in is missing or no longer accepted.
 var ErrSignIn = fmt.Errorf("sign in to AMR Health first")
 
@@ -123,6 +128,8 @@ func (h Health) Scans(ctx context.Context, token, robot string, from, to time.Ti
 		return nil, ErrSignIn
 	case code == 404:
 		return nil, fmt.Errorf("this AMR Health server does not store laser scans yet (it needs version 0.7.74 or newer)")
+	case code == 502 || code == 503 || code == 504:
+		return nil, errStarting
 	case code != 200:
 		return nil, fmt.Errorf("AMR Health answered %d to the scan list", code)
 	}
@@ -144,6 +151,8 @@ func (h Health) ScanReply(ctx context.Context, token string, id int64) ([]byte, 
 	switch {
 	case code == 401:
 		return nil, ErrSignIn
+	case code == 502 || code == 503 || code == 504:
+		return nil, errStarting
 	case code != 200:
 		return nil, fmt.Errorf("AMR Health answered %d for scan %d", code, id)
 	}
