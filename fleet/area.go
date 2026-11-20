@@ -107,7 +107,8 @@ type AreaReport struct {
 	Unknown  []string   `json:"unknown"`
 	Patterns []string   `json:"patterns"`
 	Events   []string   `json:"events"`
-	IsMap    bool       `json:"isMap"` // worth going on to laser evidence and a map fix
+	IsMap    bool       `json:"isMap"`
+	Coarse   bool       `json:"coarse"` // from AMR Health by station, not from the second-by-second history // worth going on to laser evidence and a map fix
 }
 
 func dirOf(dx, dy float64) string {

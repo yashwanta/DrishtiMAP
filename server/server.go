@@ -234,6 +234,30 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		jsonOut(w, map[string]bool{"ok": true})
+	case "/api/site/join":
+		var q struct{ Text string }
+		if err := body(r, &q); err != nil {
+			fail(w, 400, err)
+			return
+		}
+		info, err := a.JoinSite(r.Context(), q.Text)
+		if err != nil {
+			fail(w, 400, err)
+			return
+		}
+		jsonOut(w, map[string]string{"plant": info.Plant, "version": info.Version})
+	case "/api/site/auto":
+		jsonOut(w, map[string]string{"joined": a.AutoSite(a.ExeDir), "server": a.Site().HealthURL})
+	case "/api/site/share":
+		f := a.ShareSite()
+		if f.HealthURL == "" {
+			fail(w, 400, fmt.Errorf("this workspace is not joined to a site yet"))
+			return
+		}
+		b, _ := json.MarshalIndent(f, "", "  ")
+		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("Content-Disposition", "attachment; filename=\"drishti-site.json\"")
+		w.Write(b)
 	case "/api/health-login":
 		if r.Method == "POST" {
 			var q struct{ User, Pass string }
@@ -414,7 +438,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		jsonOut(w, map[string]bool{"ok": true})
 	case "/api/save":
 		name := r.URL.Query().Get("name")
-		if !regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9 ._()+-]{0,90}\.(txt|png)$`).MatchString(name) || strings.Contains(name, "..") {
+		if !regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9 ._()+-]{0,90}\.(txt|png|json)$`).MatchString(name) || strings.Contains(name, "..") {
 			fail(w, 400, fmt.Errorf("bad file name"))
 			return
 		}

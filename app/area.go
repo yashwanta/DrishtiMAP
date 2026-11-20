@@ -14,12 +14,13 @@ import (
 
 func init() {
 	reg(&Tool{Name: "area_report", Heavy: true, Desc: "READ-ONLY: what EVERY robot did inside a box on the map over a time range, from the fleet manager's history. Tells whether a problem belongs to the place (all robots), to one robot, to that robot everywhere (its scanner), to a map change, or to one-off events, with a rating that comes from the number of robots and passes. Lists each robot's passes, lowest confidence, stops, relocalisations and errors, and patterns (direction of travel, time of day, before and after a map change). Use it first for \"is this specific to one AMR or to the location\". Give the box and either hours (back from now) or from and to. It has no laser data: when the verdict is the place, the next step is a recording through the box.",
-		Params: obj(`"box":{"type":"array","items":{"type":"number"},"minItems":4,"maxItems":4,"description":"x0,y0,x1,y1 in map metres"},"hours":{"type":"number","description":"how many hours back from now (for example 6, 12, 24, 48)"},"from":{"type":"string","description":"start, fleet manager time, as 2026-01-31 06:20 (instead of hours)"},"to":{"type":"string","description":"end, same form"},"robot":{"type":"string","description":"optional: the robot the question is about"}`, "box"),
+		Params: obj(`"box":{"type":"array","items":{"type":"number"},"minItems":4,"maxItems":4,"description":"x0,y0,x1,y1 in map metres"},"hours":{"type":"number","description":"how many hours back from now (for example 6, 12, 24, 48)"},"from":{"type":"string","description":"start, fleet manager time, as 2026-01-31 06:20 (instead of hours)"},"to":{"type":"string","description":"end, same form"},"robot":{"type":"string","description":"optional: the robot the question is about"},"map":{"type":"string","description":"optional: the map whose stations are used when the report comes from AMR Health"}`, "box"),
 		Run: func(c *Ctx, args json.RawMessage) (*Result, error) {
 			var p struct {
 				Box             []float64
 				Hours           float64
 				From, To, Robot string
+				Map             string
 			}
 			if err := parse(args, &p); err != nil {
 				return nil, err
@@ -48,7 +49,8 @@ func init() {
 			}
 			site := c.App.Site()
 			if site.FleetSSH == "" {
-				return nil, fmt.Errorf("the fleet manager is not set up for this workspace. Press \"History sources\" and enter its login as user@address")
+				// no fleet manager login: the quick view from AMR Health needs no set-up at all
+				return c.App.coarseArea(c, box, from, to, p.Map, strings.TrimSpace(p.Robot))
 			}
 			c.prog(0, "reading every robot's history in the box")
 			a, err := fleet.Source{SSH: site.FleetSSH, LogDir: site.LogDir}.Area(c, box, from, to, func(d, t int) {
@@ -57,6 +59,14 @@ func init() {
 				}
 			})
 			if err != nil {
+				if site.HealthURL != "" && c.Err() == nil {
+					// the fleet manager cannot be read from this PC (no key yet, or not reachable): fall back
+					res, err2 := c.App.coarseArea(c, box, from, to, p.Map, strings.TrimSpace(p.Robot))
+					if err2 == nil {
+						res.Summary = "The second-by-second history on the fleet manager could not be read from this PC:\n  " + err.Error() + "\nShowing the quick view from AMR Health instead.\n\n" + res.Summary
+						return res, nil
+					}
+				}
 				return nil, err
 			}
 			rep := fleet.AnalyseArea(a, strings.TrimSpace(p.Robot))

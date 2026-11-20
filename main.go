@@ -86,6 +86,9 @@ func main() {
 	if err != nil {
 		fatal(err)
 	}
+	if exe, err := os.Executable(); err == nil {
+		a.ExeDir = filepath.Dir(exe)
+	}
 	if *wsFlag != "" {
 		if err := a.UseWorkspaceOnce(*wsFlag); err != nil {
 			fatal(err)

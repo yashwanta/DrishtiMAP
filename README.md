@@ -10,6 +10,11 @@ download the zip, unzip it, double-click `DrishtiMap.exe`. Nothing to install. W
 "Windows protected your PC" because the file is not signed: choose **More info**, then **Run anyway**.
 What changed in each version is on the release page and in [CHANGELOG.md](CHANGELOG.md).
 
+**First start:** on the Guided tab press **Join a site** and enter the address of your plant's AMR Health server.
+The program fills in the robots and copies the current map by itself; there is nothing else to set up. If a
+colleague gave you a site file (`drishti-site.json`), put it in the same folder as `DrishtiMap.exe` before the
+first start and it joins by itself.
+
 ## What it is
 
 An autonomous mobile robot (AMR) finds its position by matching what its laser scanners see against a map of the

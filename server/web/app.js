@@ -345,7 +345,6 @@ for (const b of $$('.tabs button')) b.onclick = () => { for (const x of $$('.tab
     if (q.get('scan')) await scanLoad(+q.get('scan'), true);
     if (q.get('gbox')) await gAuto(q);
     if (q.get('hist')) { const v = q.get('hist').split(','); $('#histRobot').value = v[0]; $('#histFrom').value = v[1]; $('#histTo').value = v[2]; $('#histCmp').checked = v[3] !== '0'; await $('#histGo').onclick(); }
-    if (!S.ws.maps.length && !S.ws.candidates.length && !S.ws.drives.length && !location.search.includes('help=')) openHelp('README');   // first start on an empty workspace
     refreshMarks(); document.title = 'DRISHTI Map' + (q.get('run') || q.get('hist') || q.get('gbox') ? ' ready' : '');
   } catch (e) { out('Start', e.message); }
   draw();

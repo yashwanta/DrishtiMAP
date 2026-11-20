@@ -19,6 +19,12 @@ Needs
   with an SSH key, and the Windows OpenSSH client (part of Windows 10 and 11).
   An AI model is optional. Every tool works without one.
 
+Join your plant (once)
+  On the Guided tab press "Join a site" and enter the address of your plant's AMR
+  Health server. The program fills in the robots and copies the current map by
+  itself. If you were given a site file (drishti-site.json), put it in the same
+  folder as DrishtiMap.exe before the first start and it joins by itself.
+
 First start
   Windows may show "Windows protected your PC" because the file is not signed by
   a publisher. Choose "More info", then "Run anyway". Your IT department can sign

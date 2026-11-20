@@ -57,6 +57,7 @@ const R = () => G.report || {};
 function gS1() {
   const b = G.box;
   return `<h2>① Where and when</h2><p>Draw a box around the trouble area. Every robot that drove through it is looked at, so you see whether it is the place or one robot.</p>
+  ${gSiteCard()}
   <div class="gcard"><b>Map</b><select id="gMap"></select></div>
   <div class="gcard"><b>Area</b><div class="row"><button data-act="draw">Draw box on the map</button><span class="dim">${b ? 'x ' + b[0].toFixed(1) + '…' + b[2].toFixed(1) + ', y ' + b[1].toFixed(1) + '…' + b[3].toFixed(1) : 'no box yet'}</span></div>
    <label>Robot the question is about (optional)<input id="gRobot" list="histRobots" placeholder="AMR-08"></label></div>
@@ -69,7 +70,7 @@ function gS1() {
 async function gFind() {
   G.robot = $('#gRobot').value.trim(); G.from = $('#gFrom').value; G.to = $('#gTo').value;
   if (!G.box) return out('guided', 'Draw a box on the map first.');
-  const args = { box: G.box, robot: G.robot || undefined }; if (G.hours) args.hours = G.hours; else { if (!G.from || !G.to) return out('guided', 'Give the From and To times.'); args.from = G.from; args.to = G.to; }
+  const args = { box: G.box, robot: G.robot || undefined, map: G.map || undefined }; if (G.hours) args.hours = G.hours; else { if (!G.from || !G.to) return out('guided', 'Give the From and To times.'); args.from = G.from; args.to = G.to; }
   const r = await gRun('area_report', args); if (!r) return;
   G.report = r.data.report; G.points = r.data.points; G.range = r.data.from + ' to ' + r.data.to; G.text = r.summary;
   out('area report', r.summary); G.reached = 0;
@@ -79,6 +80,12 @@ async function gFind() {
 // ---- 2
 function gS2() {
   const r = R(), n = Math.max(1, r.passes);
+  if (r.coarse) return `<h2>② What happened</h2><p>${r.robots.length} robots had low confidence at a station in the box, ${r.passes} times in all, ${esc(G.range)}.</p>
+  <div class="gcard verdict v-other"><b>Quick view, from AMR Health</b><p>Confidence is recorded there once a minute, by nearest station. It shows where robots had trouble; it does not count the passes that went well, and it cannot draw the trips. For second-by-second detail, add a fleet manager login under <button class="link" data-act="site">History sources …</button></p></div>
+  <div class="gcard"><b>Robots</b>${r.robots.length ? '<table class="gt"><tr><th>robot</th><th>times low</th><th>lowest</th><th>below 0.3</th><th>errors</th></tr>' + r.robots.map(w => `<tr${w.robot === G.robot ? ' class="hl"' : ''}><td>${esc(w.robot)}</td><td>${w.passes}</td><td class="${cls(w.worst)}">${w.passes ? w.worst.toFixed(2) : ''}</td><td>${w.bad || ''}</td><td class="bad" title="${esc((w.errors || []).join('\n'))}">${(w.errors || []).length || ''}</td></tr>`).join('') + '</table>' : '<p>None.</p>'}</div>
+  ${r.events && r.events.length ? '<div class="gcard"><b>Events</b>' + li(r.events) + '</div>' : ''}
+  ${r.patterns && r.patterns.length ? '<div class="gcard"><b>Patterns</b>' + li(r.patterns) + '</div>' : ''}
+  <p>The full report is in the output panel below.</p>${gNav('Find the cause')}`;
   return `<h2>② What happened</h2><p>${r.robots.length} robots, ${r.passes} passes through the box, ${esc(G.range)}.</p>
   <div class="gcard"><b>Passes</b><div class="gbar"><span style="width:${100 * r.fine / n}%;background:var(--ok)"></span><span style="width:${100 * r.low / n}%;background:var(--warn)"></span><span style="width:${100 * r.bad / n}%;background:var(--bad)"></span></div><span class="dim">${r.fine} fine · ${r.low} low (0.3 to 0.5) · ${r.bad} bad (below 0.3)</span></div>
   <div class="gcard"><b>Robots</b><table class="gt"><tr><th>robot</th><th>passes</th><th>lowest</th><th>bad</th><th>stops</th><th>errors</th></tr>${r.robots.map(w => `<tr${w.robot === G.robot ? ' class="hl"' : ''}><td>${esc(w.robot)}${w.lowAll ? ' <span class="bad" title="low everywhere in the plant">●</span>' : ''}</td><td>${w.passes}</td><td class="${cls(w.worst)}">${w.worst.toFixed(2)}</td><td>${w.bad || ''}</td><td>${w.stops || ''}</td><td class="bad" title="${esc((w.errors || []).join('\n'))}">${(w.errors || []).length || ''}</td></tr>`).join('')}</table></div>
@@ -320,6 +327,9 @@ $('#tab-guided').addEventListener('click', async ev => {
     case 'tofix': return gGo(4);
     case 'draw': if (!S.A) return out('guided', 'Choose a map first.'); S.draw.box = null; setMode('box'); toast('drag a box on the map'); gWaitBox(); return;
     case 'site': return $('#histSite').click();
+    case 'join': return gJoinDialog();
+    case 'sitecheck': gSiteData = null; gRender(); return gSite(false);
+    case 'share': { try { const t = await (await fetch('/api/site/share')).text(); if (t.trim()[0] !== '{') throw new Error(JSON.parse(t).error || 'not joined'); const r = await api('/api/save?name=' + encodeURIComponent('drishti-site.json'), { method: 'POST', body: t }); out('share this site', 'Saved: ' + r.file + '\n\nGive this file to a colleague. They put it in the same folder as DrishtiMap.exe before the first start, or press Join a site and open it.\nIt holds the server address and the plant name. No password is in it. It is internal: do not post it publicly.\n\n' + t); post('/api/open', { what: 'results' }); } catch (e) { out('share this site', e.message); } return; }
     case 'find': return gFind();
     case 'rec': G.recRobot = $('#gRecRobot').value; return recordDlg(G.recRobot);
     case 'sources': await refresh(); return gSources();
@@ -350,7 +360,36 @@ function gWaitBox() { const t = setInterval(() => { if (S.draw.mode !== 'box') {
 
 // the step bar is shown only with the Guided tab
 for (const b of $$('.tabs button')) b.addEventListener('click', () => { $('#gSteps').classList.toggle('hidden', b.dataset.tab !== 'guided'); if (b.dataset.tab === 'guided') gRender(); else { S.gEv = null; draw(); } });
-function gStart() { G = gNew(); gCases(); gRender(); }
+let gSiteData = null;
+function gSiteCard() {
+  const d = gSiteData, joined = d && d.server;
+  if (!d) return '<div class="gcard"><b>This site</b><p class="dim">Checking …</p></div>';
+  const fix = r => r.fix === 'join' ? ' <button class="link" data-act="join">Join a site …</button>' : r.fix === 'signin' ? ' <button class="link" data-act="hlogin">Sign in …</button>' : r.fix === 'history' ? ' <button class="link" data-act="site">History sources …</button>' : '';
+  const bad = d.rows.filter(r => !r.ok).length;
+  return `<div class="gcard${joined ? '' : ' verdict v-map'}"><b>This site${d.plant ? ': ' + esc(d.plant) : ''}</b> ${joined ? `<span class="rate ${bad ? '' : 'high'}">${bad ? bad + ' TO DO' : 'READY'}</span>` : ''}
+   <table class="gt">${d.rows.map(r => `<tr><td class="${r.ok ? 'ok' : 'bad'}">${r.ok ? '✔' : '✘'}</td><td>${esc(r.item)}</td><td class="${r.ok ? 'dim' : ''}">${esc(r.text)}${fix(r)}</td></tr>`).join('')}</table>
+   <div class="row"><button class="${joined ? '' : 'primary'}" data-act="join">${joined ? 'Join another site …' : 'Join a site …'}</button>${joined ? '<button data-act="share" title="Writes a small file a colleague can open with Join a site. No password is in it.">Share this site</button><button data-act="sitecheck">Check again</button>' : ''}</div></div>`;
+}
+async function gSite(auto) {
+  try {
+    if (auto) { const a = await post('/api/site/auto', {}); if (a.joined) toast(a.joined); }
+    const had = S.ws.robots.length + allMaps().length;
+    const r = await gRun('site_setup', {}); if (!r) return;
+    gSiteData = r.data; await refresh();
+    if (S.ws.robots.length + allMaps().length !== had || !S.A) { const m = allMaps(); if (m.length && !S.A) { G.map = G.map || m[m.length - 1]; await showMap(G.map); } }
+    if (G.step === 0) gRender();
+    if (auto && !gSiteData.server && !S.ws.maps.length && !S.ws.drives.length && !location.search.includes('help=')) openHelp('README');   // first start, and no site to join by itself
+  } catch (e) { gSiteData = { rows: [{ item: 'Site', ok: false, text: e.message }] }; if (G.step === 0) gRender(); }
+}
+function gJoinDialog() {
+  const [l1, addr] = field('Address of the plant\'s AMR Health server', { placeholder: '10.0.0.27 or https://amrhealth.example' });
+  const file = el('input', { type: 'file', accept: '.json,.drishti-site' }), l2 = el('label', {}, 'or open a site file a colleague gave you', file);
+  file.onchange = async () => { if (file.files[0]) addr.value = await file.files[0].text(); };
+  dialog('Join a site', el('div', {}, l1, l2, el('p', { textContent: 'That is all that is needed. The program asks the server which plant it is, fills in the robots, and copies the current map from a robot. It only reads; no password is asked for this.' })), 'Join', async () => {
+    const r = await post('/api/site/join', { text: addr.value }); toast('Joined ' + r.plant + ' (AMR Health ' + r.version + ')'); gSiteData = null; gRender(); await gSite(false);
+  });
+}
+function gStart() { G = gNew(); gCases(); gRender(); gSite(true); }
 // start-up link used by the page test: ?gbox=x0,y0,x1,y1&gfrom=..&gto=..&grobot=..&gstep=3&gdrives=a,b&gvers=m1,m2
 async function gAuto(q) {
   G = gNew(); G.box = q.get('gbox').split(',').map(Number); G.hours = 0; G.from = q.get('gfrom'); G.to = q.get('gto'); G.robot = q.get('grobot') || ''; G.map = S.A ? S.A.name : '';

@@ -8,6 +8,26 @@ To publish a version: change `Version` in `app\app.go`, add a section at the top
 `## <version> · <date> · by <your GitHub name>`, commit, then push a tag `v<version>`. GitHub builds the
 exe and publishes the release by itself, with your name and the list of commits on the release page.
 
+## 1.8.0 · 2026-11-20 · by yashwanta
+
+- **Join a site with nothing but the server address.** The first step of the Guided tab has a "This
+  site" card. Press **Join a site** and give the address of the plant's AMR Health server (or open a
+  site file). The program asks the server which plant it is, fills in the robots, and copies the
+  fleet's current map from a robot. No key, no password, no folders to prepare.
+- **It joins by itself** when a site file (`drishti-site.json`) lies beside `DrishtiMap.exe`, when the
+  variable `DRISHTI_AMRHEALTH_URL` is set, or when the company DNS has a `_drishti-amrhealth._tcp`
+  record. A package of the exe plus the site file therefore works on the first double-click.
+- **Share this site** writes that small site file for a colleague. It holds the server address and
+  the plant name, no password.
+- **Steps 1 to 3 work without a fleet manager login.** With no login set, or when the fleet manager
+  cannot be read from this PC, the area report comes from AMR Health: which robots lost confidence at
+  the stations in the box, their alarms, and whether it got worse after a map change. It is the quick
+  view: by station and once a minute, so it does not count the passes that went well. The
+  second-by-second view is used whenever a fleet manager login works.
+- The checklist on the card shows what works (server, robots, map, history, stored laser scans) and
+  offers the one button that fixes each thing that does not.
+- New tool for the assistant: `site_setup`.
+
 ## 1.7.0 · 2026-11-20 · by yashwanta
 
 - **Watch several robots for a box.** In the Evidence step, tick the robots (all are ticked to start
