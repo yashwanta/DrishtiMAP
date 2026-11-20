@@ -312,6 +312,14 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		if key == "" || key == "-" {
 			key = a.StoredKey(q.Provider.ID)
 		}
+		if len(q.Provider.Models) == 0 {
+			ps, _ := a.ProvidersView()
+			for _, p := range ps {
+				if p.ID == q.Provider.ID {
+					q.Provider.Models = p.Models
+				}
+			}
+		}
 		msg, err := ai.Test(r.Context(), q.Provider, key)
 		if err != nil {
 			fail(w, 400, err)

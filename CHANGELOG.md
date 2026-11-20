@@ -8,6 +8,13 @@ To publish a version: change `Version` in `app\app.go`, add a section at the top
 `## <version> · <date> · by <your GitHub name>`, commit, then push a tag `v<version>`. GitHub builds the
 exe and publishes the release by itself, with your name and the list of commits on the release page.
 
+## 1.8.2 · 2026-11-20 · by yashwanta
+
+- **Test connection explains a failure.** When the chosen model does not answer, the test tries it
+  again without tools (to tell "this model cannot use tools" from "this model is down at the server"),
+  then tries the connection's other models and lists the ones that answer with tools right now.
+- Requests to OpenAI-compatible servers are a little more forgiving in how the tools are described.
+
 ## 1.8.1 · 2026-11-20 · by yashwanta
 
 - **An AI connection can offer several models.** The Assistant's model list shows one entry per model,

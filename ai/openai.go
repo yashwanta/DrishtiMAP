@@ -27,7 +27,7 @@ func newOpenAI(p app.Provider, key string) *openAI {
 	o := &openAI{base: strings.TrimRight(p.BaseURL, "/"), key: key, model: p.Model, http: &http.Client{Timeout: 15 * time.Minute}}
 	o.msgs = []map[string]any{{"role": "system", "content": SystemPrompt}}
 	for _, t := range app.Tools {
-		o.tools = append(o.tools, map[string]any{"type": "function", "function": map[string]any{"name": t.Name, "description": t.Desc, "parameters": json.RawMessage(t.Params)}})
+		o.tools = append(o.tools, map[string]any{"type": "function", "function": map[string]any{"name": t.Name, "description": t.Desc, "parameters": json.RawMessage(strings.Replace(string(t.Params), `,"required":[]`, "", 1))}})
 	}
 	return o
 }
@@ -41,7 +41,11 @@ func (o *openAI) step(ctx context.Context, userText string, results []ToolResult
 	} else {
 		o.msgs = append(o.msgs, map[string]any{"role": "user", "content": userText})
 	}
-	body, _ := json.Marshal(map[string]any{"model": o.model, "messages": o.msgs, "tools": o.tools, "stream": false})
+	payload := map[string]any{"model": o.model, "messages": o.msgs, "stream": false}
+	if len(o.tools) > 0 {
+		payload["tools"] = o.tools
+	}
+	body, _ := json.Marshal(payload)
 	req, err := http.NewRequestWithContext(ctx, "POST", o.base+"/chat/completions", bytes.NewReader(body))
 	if err != nil {
 		o.msgs = o.msgs[:n0]
