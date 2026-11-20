@@ -8,6 +8,14 @@ To publish a version: change `Version` in `app\app.go`, add a section at the top
 `## <version> · <date> · by <your GitHub name>`, commit, then push a tag `v<version>`. GitHub builds the
 exe and publishes the release by itself, with your name and the list of commits on the release page.
 
+## 1.8.1 · 2026-11-20 · by yashwanta
+
+- **An AI connection can offer several models.** The Assistant's model list shows one entry per model,
+  and marks a connection that has no key yet.
+- **A site file can bring AI connections** for the Assistant (address and model names, never a key).
+  They are taken in at every start from the site file beside the program, and when a site is joined.
+  **Share this site** includes your own added connections, without their keys.
+
 ## 1.8.0 · 2026-11-20 · by yashwanta
 
 - **Join a site with nothing but the server address.** The first step of the Guided tab has a "This

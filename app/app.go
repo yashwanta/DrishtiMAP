@@ -20,7 +20,7 @@ import (
 	"drishtimap/smap"
 )
 
-const Version = "1.8.0"
+const Version = "1.8.1"
 
 // Build details. The release build on GitHub fills them in (-ldflags -X); a build made on a PC
 // leaves them empty and the footer then says "local build".
@@ -33,13 +33,14 @@ var (
 
 // Provider is one AI model connection.
 type Provider struct {
-	ID      string `json:"id"`
-	Name    string `json:"name"`
-	Kind    string `json:"kind"` // "anthropic" or "openai" (OpenAI-compatible: OpenAI, Azure, Gemini, Mistral, LM Studio, Ollama ...)
-	BaseURL string `json:"baseUrl"`
-	Model   string `json:"model"`
-	KeyEnc  string `json:"keyEnc,omitempty"` // API key, encrypted for this Windows user
-	HasKey  bool   `json:"hasKey"`
+	ID      string   `json:"id"`
+	Name    string   `json:"name"`
+	Kind    string   `json:"kind"` // "anthropic" or "openai" (OpenAI-compatible: OpenAI, Azure, Gemini, Mistral, LM Studio, Ollama ...)
+	BaseURL string   `json:"baseUrl"`
+	Model   string   `json:"model"`
+	Models  []string `json:"models,omitempty"` // when the server offers several: the ones to choose from
+	KeyEnc  string   `json:"keyEnc,omitempty"` // API key, encrypted for this Windows user
+	HasKey  bool     `json:"hasKey"`
 }
 
 // Config is stored in %APPDATA%\DRISHTI Map\config.json.

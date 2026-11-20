@@ -80,11 +80,11 @@ async function refresh() {
   const fill = (sel, items, blank) => { const v = sel.value; sel.replaceChildren(...(blank ? [el('option', { value: '', textContent: '—' })] : []), ...items.map(n => el('option', { value: n, textContent: n }))); if (items.includes(v) || (blank && v === '')) sel.value = v; };
   fill($('#selMap'), all); fill($('#selMap2'), all, true); fill($('#selAnchor'), all, true); fill($('#selDrive'), S.ws.drives.map(d => d.name)); fill($('#scanRobot'), S.ws.robots.map(r => r.name)); $('#histRobots').replaceChildren(...S.ws.robots.map(r => el('option', { value: r.name })));
   if (S.drive) $('#selDrive').value = S.drive; else S.drive = $('#selDrive').value;
-  const ps = $('#selProv'); ps.replaceChildren(...S.state.providers.map(p => el('option', { value: p.id, textContent: p.name + (p.model ? ' · ' + p.model : '') })));
-  ps.value = S.state.active; provNote();
+  const ps = $('#selProv'); ps.replaceChildren(...S.state.providers.flatMap(p => (p.models && p.models.length ? p.models : [p.model]).map(m => el('option', { value: p.id + '|' + (m || ''), textContent: p.name + (m ? ' · ' + m : '') + (p.hasKey || /127\.0\.0\.1|localhost/.test(p.baseUrl) ? '' : ' (no key yet)') }))));
+  const ap = S.state.providers.find(x => x.id === S.state.active); ps.value = ap ? ap.id + '|' + (ap.model || '') : ps.value; if (!ps.value && ps.options.length) ps.selectedIndex = 0; provNote();
 }
 function refreshMarks() { for (const li of $$('#driveList li')) li.classList.toggle('on', li.querySelector('.nm') && li.querySelector('.nm').textContent === S.drive); for (const li of $$('#mapsList li,#candList li')) { const n = li.querySelector('.nm'); if (!n) continue; li.classList.toggle('on', !!S.A && S.A.name === n.textContent); li.classList.toggle('on2', !!S.B && S.B.name === n.textContent); } }
-function provNote() { const p = (S.state.providers || []).find(x => x.id === $('#selProv').value); $('#localNote').textContent = p && /127\.0\.0\.1|localhost/.test(p.baseUrl) ? '. This model runs on this PC; nothing leaves it' : ''; }
+function provNote() { const p = (S.state.providers || []).find(x => x.id === $('#selProv').value.split('|')[0]); $('#localNote').textContent = p && /127\.0\.0\.1|localhost/.test(p.baseUrl) ? '. This model runs on this PC; nothing leaves it' : ''; }
 
 const prepView = v => { v.W = f32(v.walls); v.L = f32(v.lines); v.R = f32(v.rssi); return v; };
 async function loadView(name) { return { name, v: prepView(await api('/api/mapview?map=' + encodeURIComponent(name))) }; }
@@ -295,14 +295,14 @@ $('#settingsBtn').onclick = () => {
   const about = el('div', {}, el('h3', { textContent: 'What this app can send to a robot (read-only list)' }), el('table', {}, ...Object.entries(S.state.robotRequests).flatMap(([port, m]) => Object.entries(m).map(([t, d]) => el('tr', {}, el('td', { textContent: 'port ' + port }), el('td', { textContent: 'request ' + t }), el('td', { textContent: d }))))), el('p', { textContent: 'DRISHTI Map ' + S.state.version + '. API keys are stored encrypted for this Windows user. The assistant is sent tool result text only.' }));
   box.append(more, about);
   dialog('Settings — AI models', box, 'Save', async () => {
-    for (const r of rows) { if (r.gone) { await post('/api/provider/delete', { id: r.p.id }); continue; } await post('/api/provider', { provider: { id: r.p.id, name: r.name.value.trim() || r.p.id, kind: r.kind.value, baseUrl: r.url.value.trim(), model: r.model.value.trim() }, key: r.key.value, active: false }); }
+    for (const r of rows) { if (r.gone) { await post('/api/provider/delete', { id: r.p.id }); continue; } await post('/api/provider', { provider: { id: r.p.id, name: r.name.value.trim() || r.p.id, kind: r.kind.value, baseUrl: r.url.value.trim(), model: r.model.value.trim(), models: r.p.models || undefined }, key: r.key.value, active: false }); }
     await refresh();
   });
 };
 
 // ---------------------------------------------------------------- assistant
 let chatSeq = 0, chatT = 0;
-$('#selProv').onchange = async () => { const p = S.state.providers.find(x => x.id === $('#selProv').value); if (p) { await post('/api/provider', { provider: p, key: '', active: true }); S.state.active = p.id; provNote(); } };
+$('#selProv').onchange = async () => { const [id, model] = $('#selProv').value.split('|'); const p = S.state.providers.find(x => x.id === id); if (p) { p.model = model || p.model; await post('/api/provider', { provider: p, key: '', active: true }); S.state.active = p.id; provNote(); if (!p.hasKey && !/127\.0\.0\.1|localhost/.test(p.baseUrl)) toast('This connection has no key yet: Settings, then enter the API key and press Test connection.'); } };
 function addEvent(e) {
   const log = $('#chatLog');
   if (e.type === 'tool') { const d = el('details', { className: 'tool' }, el('summary', { textContent: '▸ ran ' + e.tool.replace(/_/g, ' ') }), el('pre', { textContent: e.text })); d.dataset.tool = e.tool; log.append(d); }

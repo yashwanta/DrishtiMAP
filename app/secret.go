@@ -75,6 +75,9 @@ func (a *App) SaveProvider(p Provider, key string, makeActive bool) error {
 		if o.ID == p.ID {
 			idx = i
 			p.KeyEnc = o.KeyEnc
+			if len(p.Models) == 0 {
+				p.Models = o.Models
+			}
 		}
 	}
 	switch key {

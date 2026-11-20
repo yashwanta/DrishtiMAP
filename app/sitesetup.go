@@ -24,12 +24,13 @@ import (
 
 // SiteFile is what "Share this site" writes and "Join a site" reads. It holds no password.
 type SiteFile struct {
-	DrishtiSite    int    `json:"drishtiSite"` // format version
-	Name           string `json:"name"`
-	HealthURL      string `json:"healthURL"`
-	HealthInsecure bool   `json:"healthInsecure"`
-	Plant          string `json:"plant"`
-	FleetSSH       string `json:"fleetSSH,omitempty"` // optional: a login for the second-by-second history
+	DrishtiSite    int        `json:"drishtiSite"` // format version
+	Name           string     `json:"name"`
+	HealthURL      string     `json:"healthURL"`
+	HealthInsecure bool       `json:"healthInsecure"`
+	Plant          string     `json:"plant"`
+	FleetSSH       string     `json:"fleetSSH,omitempty"`  // optional: a login for the second-by-second history
+	Providers      []Provider `json:"providers,omitempty"` // optional: AI connections for the Assistant, without keys
 }
 
 // ShareSite returns this workspace's site as a file to hand to a colleague.
@@ -39,7 +40,17 @@ func (a *App) ShareSite() SiteFile {
 	if name == "" {
 		name = "site"
 	}
-	return SiteFile{DrishtiSite: 1, Name: name, HealthURL: s.HealthURL, HealthInsecure: s.HealthInsecure, Plant: s.Plant}
+	f := SiteFile{DrishtiSite: 1, Name: name, HealthURL: s.HealthURL, HealthInsecure: s.HealthInsecure, Plant: s.Plant}
+	a.mu.Lock()
+	for _, p := range a.Cfg.Providers {
+		if p.ID == "claude" || p.ID == "openai" || p.ID == "ollama" {
+			continue // every installation has these already
+		}
+		p.KeyEnc, p.HasKey = "", false // a key never leaves this PC
+		f.Providers = append(f.Providers, p)
+	}
+	a.mu.Unlock()
+	return f
 }
 
 var urlish = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9.-]*(:\d+)?$`)
@@ -79,13 +90,88 @@ func (a *App) JoinSite(ctx context.Context, text string) (fleet.Info, error) {
 	if f.FleetSSH != "" && s.FleetSSH == "" {
 		s.FleetSSH = f.FleetSSH
 	}
+	a.addProviders(f.Providers)
 	return info, a.SaveSite(s)
+}
+
+// addProviders takes the AI connections of a site file into this user's settings: new ones are
+// added, known ones get the file's address and model list. A stored key is always kept.
+func (a *App) addProviders(ps []Provider) int {
+	n := 0
+	a.mu.Lock()
+	for _, p := range ps {
+		p.ID = strings.TrimSpace(p.ID)
+		if _, err := safeName(p.ID); err != nil || (p.Kind != "anthropic" && p.Kind != "openai") {
+			continue
+		}
+		if !strings.HasPrefix(p.BaseURL, "https://") && !strings.HasPrefix(p.BaseURL, "http://") {
+			continue
+		}
+		p.KeyEnc, p.HasKey = "", false
+		found := false
+		for i, o := range a.Cfg.Providers {
+			if o.ID == p.ID {
+				found = true
+				o.Name, o.BaseURL, o.Models = p.Name, strings.TrimRight(p.BaseURL, "/"), p.Models
+				if o.Model == "" {
+					o.Model = p.Model
+				}
+				a.Cfg.Providers[i] = o
+			}
+		}
+		if !found {
+			p.BaseURL = strings.TrimRight(p.BaseURL, "/")
+			if p.Model == "" && len(p.Models) > 0 {
+				p.Model = p.Models[0]
+			}
+			a.Cfg.Providers = append(a.Cfg.Providers, p)
+			n++
+			// make it the one in use when the current choice has no key yet
+			cur := ""
+			for _, o := range a.Cfg.Providers {
+				if o.ID == a.Cfg.Active {
+					cur = o.KeyEnc
+				}
+			}
+			if cur == "" {
+				a.Cfg.Active = p.ID
+			}
+		}
+	}
+	a.mu.Unlock()
+	if len(ps) > 0 {
+		a.saveCfg()
+	}
+	return n
+}
+
+// siteFilesBeside reads the site files that lie beside the program.
+func siteFilesBeside(exeDir string) []SiteFile {
+	var out []SiteFile
+	for _, pat := range []string{"drishti-site.json", "*.drishti-site"} {
+		m, _ := filepath.Glob(filepath.Join(exeDir, pat))
+		for _, f := range m {
+			b, err := os.ReadFile(f)
+			if err != nil {
+				continue
+			}
+			var sf SiteFile
+			if json.Unmarshal([]byte(strings.TrimPrefix(string(b), "\xef\xbb\xbf")), &sf) == nil {
+				out = append(out, sf)
+			}
+		}
+	}
+	return out
 }
 
 // AutoSite looks, once at start-up, for a site to join when this workspace has none: a site file
 // beside the program, the DRISHTI_AMRHEALTH_URL variable, or a service record in the company's DNS
 // (_drishti-amrhealth._tcp). It returns what it did, in words ("" = nothing found).
 func (a *App) AutoSite(exeDir string) string {
+	// AI connections from a site file beside the program are taken in at every start
+	for _, sf := range siteFilesBeside(exeDir) {
+		a.addProviders(sf.Providers)
+	}
 	if a.Site().HealthURL != "" {
 		return ""
 	}
