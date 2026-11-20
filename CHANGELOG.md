@@ -8,6 +8,23 @@ To publish a version: change `Version` in `app\app.go`, add a section at the top
 `## <version> · <date> · by <your GitHub name>`, commit, then push a tag `v<version>`. GitHub builds the
 exe and publishes the release by itself, with your name and the list of commits on the release page.
 
+## 1.5.0 · 2026-11-20 · by yashwanta
+
+- **Evidence step rebuilt.** It now says what it is for, lists only the recordings that really drive
+  through the box (passes, direction, lowest confidence) and says when none does.
+- **Record it when it drives through**: choose a robot and the program records it by itself from the
+  moment it comes near the box until it has left. Nobody has to time a start and a stop. The robot is
+  still sent by the fleet manager; the program never moves a robot.
+- **Compare what the robots see with the map**: map versions with the same walls in the box are grouped,
+  so only versions that really differ there are offered, and a sensible few are ticked for you.
+- **Move a whole misplaced piece, guided** (the method that fixed the reference case): the Evidence step
+  now reports position jumps; when there is one, Fix options offers the piece move. The program finds
+  the rigid pieces, you confirm which part is right, it measures the turn with its spread, you mark the
+  piece on the map, and it builds, checks and replays. If jumps are left at the seam, it finds the map
+  version whose walls fit that stretch best and repairs it. Going on to the trial needs all checks
+  passed and no jump left.
+- New tools for the assistant: `record_arm`, `box_sources`.
+
 ## 1.4.0 · 2026-11-20 · by yashwanta
 
 - **Guided tab**: one trouble spot in eight steps, from a box on the map to a fixed map that was tried on

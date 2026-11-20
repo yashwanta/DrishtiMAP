@@ -39,7 +39,7 @@ func ParseArea(lines []string) *Area {
 		case f[0] == "A" && len(f) >= 5:
 			a.Points = append(a.Points, AreaPt{f[1], pf(f[2]), pf(f[3]), pf(f[4])})
 		case f[0] == "G" && len(f) >= 4:
-			if n := pf(f[2]); n >= 60 {
+			if n := pf(f[2]); n >= 300 {
 				a.Global[f[1]] = pf(f[3]) / n
 			}
 		case f[0] == "S" && len(f) >= 2:

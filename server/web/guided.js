@@ -38,6 +38,7 @@ function gOverlay() {
   S.ov = o; S.gEv = (G.step === 3 || G.step === 4) ? G.evPts : null; draw();
 }
 function paintGuided(dp) {
+  if (G && G.step === 5 && G.fix === 'piece' && G.pc && G.pc.pieces && S.gRows) { const c = G.pc, col = i => { for (const k of c.move || []) if (i >= c.pieces[k].range.From && i <= c.pieces[k].range.To) return '#f5a623'; for (const k of c.ref || []) if (i >= c.pieces[k].range.From && i <= c.pieces[k].range.To) return '#22d3ee'; return '#6b7280'; }; for (const r of S.gRows) { ctx.fillStyle = col(r.i); ctx.fillRect(X(r.x) - 2.5 * dp, Y(r.y) - 2.5 * dp, 5 * dp, 5 * dp); } if (c.seamBox && c.proof && c.proof.jumpsAfter > 0) { const b = c.seamBox; ctx.strokeStyle = '#38bdf8'; ctx.lineWidth = 2 * dp; ctx.strokeRect(X(b[0]), Y(b[3]), X(b[2]) - X(b[0]), Y(b[1]) - Y(b[3])); } if ((c.region || []).length >= 3) { ctx.strokeStyle = '#f5a623'; ctx.fillStyle = '#f5a62318'; ctx.lineWidth = 2 * dp; ctx.beginPath(); c.region.forEach((q, i) => ctx[i ? 'lineTo' : 'moveTo'](X(q[0]), Y(q[1]))); ctx.closePath(); ctx.fill(); ctx.stroke(); } }
   const e = S.gEv; if (!e) return; const sz = Math.max(2, Math.min(5, S.view.k / 10)) * dp;
   dots(e.seen, '#4ade80', sz); dots(e.unseen, '#f87171', sz); dots(e.always, '#60a5fa', sz); dots(e.sometimes, '#e879f9', sz);
 }
@@ -48,6 +49,7 @@ function gRender() {
   const p = $('#tab-guided'); p.innerHTML = [gS1, gS2, gS3, gS4, gS5, gS6, gS7, gS8][G.step](); p.scrollTop = 0;
   if (G.step === 0) { const m = $('#gMap'); m.replaceChildren(...allMaps().map(n => el('option', { value: n, textContent: n }))); m.value = G.map || (S.A && S.A.name) || m.value; G.map = m.value; m.onchange = () => { G.map = m.value; showMap(m.value); }; $('#gRobot').value = G.robot || ''; $('#gFrom').value = G.from || ''; $('#gTo').value = G.to || ''; }
   gOverlay();
+  if (G.step === 3 && !G.src && !gBusy && G.box && G.map) gSources();
 }
 const R = () => G.report || {};
 
@@ -96,46 +98,68 @@ function gS3() {
 }
 // ---- 4
 function gS4() {
-  const e = G.ev, ds = S.ws.drives, others = allMaps().filter(n => n !== G.map);
-  return `<h2>④ Evidence</h2><p>The history shows where and when. Laser recordings show which walls do not match. Choose recordings that drive through the box, made at different times if you have them.</p>
-  <div class="gcard"><b>Recordings</b>${ds.length ? ds.map(d => `<label class="row"><input type="checkbox" class="gDrive" value="${esc(d.name)}"${(G.drives || []).includes(d.name) ? ' checked' : ''}>${esc(d.name)} <small class="dim">${d.samples}</small></label>`).join('') : '<p>None yet.</p>'}
-   <div class="row"><select id="gRecRobot">${S.ws.robots.map(r => `<option>${esc(r.name)}</option>`).join('')}</select><button data-act="rec">Record a pass …</button></div><span class="dim">Recording only reads from the robot. Start it before the robot reaches the box.</span></div>
-  <div class="gcard"><b>Compare with other map versions</b>${others.length ? others.map(n => `<label class="row"><input type="checkbox" class="gVer" value="${esc(n)}"${(G.vers || []).includes(n) ? ' checked' : ''}>${esc(n)}</label>`).join('') : '<p>No other version in this workspace.</p>'}</div>
-  <div class="row"><button class="primary" data-act="evidence">Lay the lasers over the map</button></div>
-  ${e ? `<div class="gcard"><b>How well each version fits here</b><table class="gt">${e.fits.map((f, i) => `<tr><td>${esc(f.map)}${i === 0 ? ' <span class="dim">(in question)</span>' : ''}</td><td class="${f.match >= 55 ? 'ok' : f.match >= 40 ? 'warn' : 'bad'}">${f.match.toFixed(0)} %</td></tr>`).join('')}</table></div>
+  const e = G.ev, src = G.src && G.src.drives ? G.src : null;
+  const cover = src ? src.drives.filter(d => d.passes > 0) : [], rest = src ? src.drives.length - cover.length : 0;
+  const diff = src ? src.versions.filter(v => !v.same && !v.sameAs) : [], same = src ? src.versions.filter(v => v.same).length : 0;
+  const robots = S.ws.robots.map(r => `<option${r.name === (G.recRobot || G.robot) ? ' selected' : ''}>${esc(r.name)}</option>`).join('');
+  return `<h2>④ Evidence</h2>
+  <p>Steps 1 to 3 showed <b>that</b> robots have trouble here. This step finds <b>which walls</b> are wrong, so a fix can be built. For that it needs laser scans taken inside the box. They are not collected all the time: a recording has to be made.</p>
+  <div class="gcard"><b>A · Recordings that drive through this box</b>
+   ${!src ? '<p class="dim">Looking at the recordings …</p>' : cover.length ? cover.map(d => `<label class="row"><input type="checkbox" class="gDrive" value="${esc(d.name)}"${(G.drives ? G.drives.includes(d.name) : true) ? ' checked' : ''}><span>${esc(d.name)}<br><small class="dim">${d.passes} pass${d.passes > 1 ? 'es' : ''}${d.dir ? ', heading ' + esc(d.dir) : ''}, lowest confidence ${d.min.toFixed(2)}, ${esc(d.when)}</small></span></label>`).join('') : '<p class="bad">No recording covers this box yet.</p>'}
+   ${rest ? `<span class="dim">${rest} other recording${rest > 1 ? 's do' : ' does'} not drive through the box and cannot be used here.</span>` : ''}
+   <p><b>Get a recording:</b> choose a robot whose route goes through the box${R().patterns && /heading (north|south|east|west)/.test(R().patterns.join(' ')) ? ', heading <b>' + R().patterns.join(' ').match(/heading (north|south|east|west)/)[1] + '</b> (that is the direction with the trouble)' : ''}.</p>
+   <div class="row"><select id="gRecRobot">${robots}</select><button class="primary" data-act="arm" title="Waits until this robot comes near the box, records while it is there, and stops by itself">Record it when it drives through</button></div>
+   <div class="row"><button data-act="rec">Record now …</button><button data-act="sources">Refresh the list</button></div>
+   ${G.armed ? `<p class="warn">${esc(G.armed)}</p>` : ''}
+   <span class="dim">This only reads from the robot. The program never sends a robot anywhere: it is sent by the fleet manager as usual.</span></div>
+  <div class="gcard"><b>B · Compare what the robots see with the map</b>
+   <p class="dim">Puts the recorded lasers on the map inside the box. It also tries earlier versions of the map that have different walls here: if one of them matches the lasers better, its walls are the fix.</p>
+   ${diff.length ? diff.map(v => `<label class="row"><input type="checkbox" class="gVer" value="${esc(v.name)}"${(G.vers ? G.vers.includes(v.name) : v.pick) ? ' checked' : ''}><span>${esc(v.name)} <small class="dim">${esc(v.date)}</small></span></label>`).join('') : src ? '<p class="dim">No other version in this workspace has different walls in this box.</p>' : ''}
+   ${same ? `<span class="dim">${same} other version${same > 1 ? 's have' : ' has'} the same walls here as ${esc(G.map)}: nothing to compare. So a map change did not alter the walls in this box.</span>` : ''}
+   <div class="row"><button class="primary" data-act="evidence"${cover.length ? '' : ' disabled'}>Compare</button></div></div>
+  ${e ? `<div class="gcard"><b>How well each version fits what the robots see here</b><table class="gt">${e.fits.map((f, i) => `<tr><td>${esc(f.map)}${i === 0 ? ' <span class="dim">(in question)</span>' : ''}</td><td class="${f.match >= 55 ? 'ok' : f.match >= 40 ? 'warn' : 'bad'}">${f.match.toFixed(0)} %</td></tr>`).join('')}</table><span class="dim">A good map gives 50 to 75 %.</span></div>
    <div class="gcard"><b>${esc(G.map)} in this box</b><div class="gkv"><span><i style="background:#4ade80"></i>walls seen by the lasers</span><span>${e.seenPct.toFixed(0)} %</span><span><i style="background:#f87171"></i>walls not seen (gone, or hidden)</span><span>${e.unseenPct.toFixed(0)} %</span>
     <span><i style="background:#60a5fa"></i>seen ${e.drives > 1 ? 'in every recording' : ''}, not in the map</span><span>${e.always} cells</span>${e.drives > 1 ? `<span><i style="background:#e879f9"></i>seen in some recordings only</span><span>${e.sometimes} cells</span>` : ''}</div>
-    ${e.drives < 2 ? '<span class="dim">With one recording a parked bin and a new wall look the same. A second recording at another time tells them apart.</span>' : ''}</div>` : ''}
+    ${e.drives < 2 ? '<span class="dim">With one recording a parked bin and a new wall look the same. A second recording at another time tells them apart.</span>' : ''}</div>
+   <div class="gcard verdict ${(G.jumps || []).length ? 'v-map' : 'v-ok'}"><b>Position jumps along the recording: ${(G.jumps || []).length}</b><p>${(G.jumps || []).length ? esc(G.jumps.map(j => j.step.toFixed(2) + ' m near ' + j.near).join('; ')) + '. A jump means a whole piece of the map sits in the wrong place. A box cannot fix that: the next step offers the piece move.' : 'The map does not make the robot jump on this recording. No piece of the map is misplaced along it.'}</p></div>` : ''}
   ${gNav('Fix options', !!e)}`;
 }
+async function gSources() {
+  if (!G.box || !G.map) return; G.src = { loading: true }; gRender();
+  const r = await gRun('box_sources', { box: G.box, map: G.map }); G.src = r ? r.data : null; if (r) out('evidence sources', r.summary); gRender(); if (r) gSave();
+}
 async function gEvidence() {
-  G.drives = $$('.gDrive:checked').map(c => c.value); G.vers = $$('.gVer:checked').map(c => c.value);
-  if (!G.drives.length) return out('guided', 'Tick at least one recording that drives through the box, or record a pass.');
+  G.drives = $$('.gDrive:checked').map(c => c.value); G.vers = $$('.gVer:checked').map(c => c.value).slice(0, 5);
+  if (!G.drives.length) return out('guided', 'Tick at least one recording that drives through the box, or record one.');
   const r = await gRun('box_evidence', { box: G.box, drives: G.drives, maps: [G.map, ...G.vers] }); if (!r) return;
   const d = r.data; G.evPts = { seen: f32(d.ptsSeen), unseen: f32(d.ptsUnseen), always: f32(d.ptsAlways), sometimes: f32(d.ptsSometimes) };
   G.ev = { fits: d.fits, bestOther: d.bestOther, seenPct: d.seenPct, unseenPct: d.unseenPct, always: d.always, sometimes: d.sometimes, drives: d.drives }; G.evText = r.summary;
-  out('laser evidence', r.summary); gRender(); gSave();
+  G.jumps = []; let txt = r.summary;
+  for (const dn of G.drives.slice(0, 3)) { const p = await gRun('replay', { drive: dn, map: G.map }); if (!p) continue; for (const s of (p.data.stretches || [])) if (s.Step >= 0.5 && !s.Ambiguous && !s.TrackBreak) G.jumps.push({ drive: dn, step: s.Step, near: s.Near, x: s.X, y: s.Y }); txt += '\n\n' + p.summary; }
+  out('laser evidence', txt); gRender(); gSave();
 }
 // ---- 5
 function gS5() {
-  const e = G.ev || { fits: [] }, cur = e.fits[0] || { match: 0 }, bo = e.bestOther, bf = e.fits.find(f => f.map === bo);
+  const e = G.ev || { fits: [] }, cur = e.fits[0] || { match: 0 }, bo = e.bestOther, bf = e.fits.find(f => f.map === bo), jumps = (G.jumps || []).length;
+  const pieceOn = jumps > 0 || !!(G.proof && G.proof.wallFail);
   const comes = e.drives > 1 && e.sometimes > 3 * e.always && e.sometimes > 30;
   const opt = (id, on, title, text) => `<div class="gopt${on ? (G.fix === id ? ' sel' : '') : ' no'}"${on ? ` data-fix="${id}"` : ''}><span class="r"></span><span><b>${title}</b><br><span class="dim">${text}</span></span></div>`;
   return `<h2>⑤ Fix options</h2><p>Only fixes that fit the evidence can be chosen.</p>
-  ${opt('donor', !!bo, bo ? 'Take the walls in the box from ' + esc(bo) : 'Take the walls in the box from another version', bo ? `It fits the lasers ${bf.match.toFixed(0)} % here; the map in question ${cur.match.toFixed(0)} %. Stations and paths stay where they are.` : 'Not offered: no other version in the comparison fits the lasers at least 5 points better. Tick more versions in step 4 if you have them.')}
-  ${opt('piece', false, 'Turn or shift a whole piece of the map', 'Not in the guided steps yet. If Detect shows a jump at a seam, use the Advanced tab: Find rigid pieces, Measure turn, Build. A box cannot fix a misplaced piece; it only moves the jump.')}
-  ${opt('rescan', false, 'Rescan this area in RoboShop', cur.match < 55 && !bo ? 'This is the way here: no version fits what the robots see (' + cur.match.toFixed(0) + ' %). The floor has changed since every scan.' : 'For when no version fits. Not needed if an option above can be chosen.')}
+  ${opt('piece', pieceOn, 'Move a whole misplaced piece of the map', pieceOn ? (jumps ? `The recording shows ${jumps} position jump${jumps > 1 ? 's' : ''}. ` : 'The box fix put a wall on a path. ') + 'That is a piece of map attached in the wrong place. The program finds the piece, measures how far it is turned and shifted, and moves it with its stations, paths and lines together. This is the method that fixed the reference case.' : 'Not offered: the recording shows no position jump, so no piece is misplaced along it.')}
+  ${opt('donor', !!bo, bo ? 'Take the walls in the box from ' + esc(bo) : 'Take the walls in the box from another version', bo ? `It fits the lasers ${bf.match.toFixed(0)} % here; the map in question ${cur.match.toFixed(0)} %. Stations and paths stay where they are.` + (jumps ? ' With a jump on the recording this is usually not enough: the checks in the next step will tell.' : '') : 'Not offered: no other version fits the lasers at least 5 points better here.')}
+  ${opt('rescan', false, 'Rescan this area in RoboShop', cur.match < 55 && !bo && !pieceOn ? 'This is the way here: no version fits what the robots see (' + cur.match.toFixed(0) + ' %). The floor has changed since every scan.' : 'For when nothing above fits. Done in RoboShop, not here.')}
   ${comes ? '<div class="gcard"><b>Things come and go here</b><p>Most of what the lasers see outside the map is there in some recordings only. A storage position cannot be made right in a map: any version is wrong half the time.</p></div>' : ''}
-  <div class="gcard"><b>Area to change</b><div class="row"><button data-act="draw">Redraw the box</button><span class="dim">x ${G.box[0].toFixed(1)}…${G.box[2].toFixed(1)}, y ${G.box[1].toFixed(1)}…${G.box[3].toFixed(1)}</span></div><label>Name of the new map file<input id="gName" value="${esc(G.candName || '')}" placeholder="PLANTMAP_v6"></label></div>
-  ${gNav('Build', G.fix === 'donor')}`;
+  <div class="gcard"><label>Name of the new map file<input id="gName" value="${esc(G.candName || '')}" placeholder="PLANTMAP_v6"></label>${G.fix === 'donor' ? `<div class="row"><button data-act="draw">Redraw the box</button><span class="dim">x ${G.box[0].toFixed(1)}…${G.box[2].toFixed(1)}, y ${G.box[1].toFixed(1)}…${G.box[3].toFixed(1)}</span></div>` : ''}</div>
+  ${gNav(G.fix === 'piece' ? 'Analyse the piece' : 'Build', G.fix === 'donor' || G.fix === 'piece')}`;
 }
 // ---- 6
 function gS6() {
+  if (G.fix === 'piece') return gS6Piece();
   const p = G.proof;
   if (!p) return `<h2>⑥ Build and prove</h2><p>Writes the new map as a file in <i>candidates</i>, runs every check, and lays the same recordings over it. The map on the robots is not touched.</p><div class="row"><button class="primary" data-act="build">Build ${esc(G.candName || '')}</button></div>${gNav('')}`;
   return `<h2>⑥ Build and prove</h2>
   <div class="gcard"><b>File</b><p>${esc(G.cand)}.smap in <i>candidates</i>. Not on any robot.</p></div>
-  <div class="gcard verdict ${p.checksOk ? 'v-ok' : 'v-map'}"><b>Checks: ${p.checksOk ? 'all pass' : 'NOT all pass'}</b><p>${p.checksOk ? 'Same stations, paths, bins and areas; nothing closer to a wall than before; no feature line on a path.' : (p.wallFail ? 'With these walls a path or station would be too close to a wall. That is the sign of a misplaced piece of map: the walls belong somewhere else than the stations and paths that go with them, and a box cannot fix that. Go to the Advanced tab: Find rigid pieces, Measure turn, Build (move a region). ' : '') + 'The full report is in the output panel. Do not go on with a failed check.'}</p></div>
+  <div class="gcard verdict ${p.checksOk ? 'v-ok' : 'v-map'}"><b>Checks: ${p.checksOk ? 'all pass' : 'NOT all pass'}</b><p>${p.checksOk ? 'Same stations, paths, bins and areas; nothing closer to a wall than before; no feature line on a path.' : (p.wallFail ? 'With these walls a path or station would be too close to a wall. That is the sign of a misplaced piece of map: the walls belong somewhere else than the stations and paths that go with them, and a box cannot fix that. Go back to the fix options and choose "Move a whole misplaced piece". ' : '') + 'The full report is in the output panel. Do not go on with a failed check.'}</p></div>
   <div class="gcard"><b>The same lasers through both maps, in the box</b><div class="gkv3"><span></span><span class="h">before</span><span class="h">after</span><span>laser points on a wall</span><span class="${p.before >= 55 ? 'ok' : 'warn'}">${p.before.toFixed(0)} %</span><span class="${p.after >= 55 ? 'ok' : 'warn'}">${p.after.toFixed(0)} %</span></div>
    ${p.after < p.before + 3 ? '<p class="bad">The new file does not fit the lasers better. Go back to the fix options.</p>' : ''}</div>
   <p>A passed replay is evidence, not proof. It says nothing about a direction or a route the recordings did not drive.</p>${gNav('Go to trial', p.checksOk && p.after >= p.before + 3)}`;
@@ -149,6 +173,83 @@ async function gBuild() {
   out('build ' + G.cand, r.summary);
   const fit = n => (e.data.fits.find(f => f.map === n) || { match: 0 }).match;
   G.proof = { checksOk, wallFail: /FAIL +no (path|station) is closer to a wall/.test(r.summary), before: fit(G.map), after: fit(G.cand) }; gRender(); gSave(); await showMap(G.cand); gOverlay();
+}
+// ---- 6, the piece move: find the rigid pieces, measure the turn, move the whole piece, prove it
+const rangeOf = p => [p.range.From, p.range.To];
+function gS6Piece() {
+  const c = G.pc || (G.pc = { drive: (G.drives || [])[0] || '' }), ps = c.pieces, t = c.turn, pr = c.proof;
+  const ds = (G.src && G.src.drives ? G.src.drives : S.ws.drives).map(d => `<option${d.name === c.drive ? ' selected' : ''}>${esc(d.name)}</option>`).join('');
+  const reg = c.region || [];
+  return `<h2>⑥ Move a misplaced piece</h2><p>A jump shows at a seam; the cause is the whole piece behind it. Move the whole piece once. Moving part of it only moves the jump.</p>
+  <div class="gcard"><b>1 · Recording that drives the whole piece</b><select id="gPcDrive">${ds}</select><span class="dim">Best is one drive from the part that is right, through the misplaced piece, and back to the part that is right.</span>
+   <div class="row"><button class="${ps ? '' : 'primary'}" data-act="pieces">Find the rigid pieces</button></div></div>
+  ${ps ? `<div class="gcard"><b>2 · Which piece is misplaced, which part is right</b><table class="gt"><tr><th>samples</th><th>from – to</th><th>length</th><th>step</th><th>turn</th><th title="the misplaced piece">move</th><th title="known to be right">right</th></tr>${ps.map((p, i) => `<tr><td>${p.range.From}–${p.range.To}</td><td>${esc(p.from)} – ${esc(p.to)}</td><td>${p.length.toFixed(0)} m</td><td class="${p.stepAtSeam >= 0.5 ? 'bad' : ''}">${i ? p.stepAtSeam.toFixed(2) + ' m' : ''}</td><td>${i ? p.turnDeg.toFixed(1) + '°' : ''}</td><td><input type="checkbox" class="gPcMove" value="${i}"${(c.move || []).includes(i) ? ' checked' : ''}></td><td><input type="checkbox" class="gPcRef" value="${i}"${(c.ref || []).includes(i) ? ' checked' : ''}></td></tr>`).join('')}</table>
+    <span class="dim">Each row is a stretch over which the map is rigid against the lasers. "step" and "turn" say how it sits against the row above. On the map: <span style="color:#f5a623">orange</span> = to move, <span style="color:#22d3ee">cyan</span> = right. <b>The program cannot know which side is right.</b> Its first guess is that the drive started on the right part. The right part is the one that looks the same in older versions of the map; the misplaced piece is the one that was scanned or attached later. Change the ticks if needed.</span>
+    <div class="row"><button class="${t ? '' : 'primary'}" data-act="measure">Measure the turn</button></div></div>` : ''}
+  ${t ? `<div class="gcard"><b>3 · The correction</b><div class="gkv"><span>turn</span><span>${t.rotDeg.toFixed(2)}° ± ${t.spreadDeg.toFixed(2)}°</span><span>shift</span><span>${t.tx.toFixed(2)} m, ${t.ty.toFixed(2)} m</span></div><span class="dim">Measured three times; the ± is the spread. At 40 m from the turning point, 0.2° is about 0.14 m.</span></div>
+   <div class="gcard"><b>4 · Mark the whole piece on the map</b><p class="dim">Click corners around everything that belongs to the misplaced piece (the orange track and the walls, stations and paths beside it); double-click to finish. Cut the route where the orange track begins.</p>
+    <div class="row"><button class="${reg.length >= 3 ? '' : 'primary'}" data-act="region">Draw the region</button><span class="${reg.length >= 3 ? 'ok' : 'dim'}">${reg.length >= 3 ? reg.length + ' corners' : 'not drawn yet'}</span></div>
+    <label>Walls that must stay where they are (optional: an older map that was right outside the piece)<select id="gPcAnchor"><option value="">—</option>${allMaps().filter(n => n !== G.map).map(n => `<option${n === c.anchor ? ' selected' : ''}>${esc(n)}</option>`).join('')}</select></label>
+    <div class="row"><button class="primary" data-act="pbuild"${reg.length >= 3 ? '' : ' disabled'}>Build ${esc(G.candName || '')} and prove it</button></div></div>` : ''}
+  ${pr ? `<div class="gcard verdict ${pr.checksOk ? 'v-ok' : 'v-map'}"><b>Checks: ${pr.checksOk ? 'all pass' : 'NOT all pass'}</b><p>${pr.checksOk ? 'Stations and paths inside the piece moved together and kept their spacing; nothing is closer to a wall than before.' : 'Read the report in the output panel. Usually the region cut through something that belongs together: redraw it and build under a new name.'}</p></div>
+   <div class="gcard"><b>The same recording through both maps</b><div class="gkv3"><span></span><span class="h">before</span><span class="h">after</span><span>position jumps</span><span class="${pr.jumpsBefore ? 'bad' : 'ok'}">${pr.jumpsBefore}</span><span class="${pr.jumpsAfter ? 'bad' : 'ok'}">${pr.jumpsAfter}</span><span>laser points on a wall</span><span>${pr.fitBefore.toFixed(0)} %</span><span>${pr.fitAfter.toFixed(0)} %</span></div>
+    ${pr.jumpsAfter ? '<p class="bad">A jump is still there. The region or the piece choice is not right yet: a partial move only moves the jump.</p>' : ''}</div>` : ''}
+  ${pr && pr.checksOk && pr.jumpsAfter > 0 ? gSeamCard(c) : ''}
+  ${gNav('Go to trial', !!pr && pr.checksOk && (pr.jumpsAfter === 0 || (!!c.seam && c.seam.checksOk && c.seam.jumpsAfter === 0)))}`;
+}
+function gSeamCard(c) {
+  const b = c.seamBox, f = c.seamFits, sm = c.seam;
+  return `<div class="gcard"><b>5 · Repair what is left at the seam</b><p class="dim">The piece is in place, but ${esc((c.afterJumps || []).map(j => j.step.toFixed(2) + ' m near ' + j.near).join(' and '))} remain. Where the piece meets the rest, the old walls of both placements overlap or were cleaned away. Take the walls for just that stretch from the map version that fits the lasers best there.</p>
+   <div class="row"><button data-act="seambox">Redraw the stretch</button><span class="dim">${b ? 'x ' + b[0].toFixed(1) + '…' + b[2].toFixed(1) + ', y ' + b[1].toFixed(1) + '…' + b[3].toFixed(1) + ' (blue box on the map)' : 'no box'}</span></div>
+   <div class="row"><button class="${f ? '' : 'primary'}" data-act="seamfind"${b ? '' : ' disabled'}>Find the best walls for this stretch</button></div>
+   ${f ? '<table class="gt">' + f.map((x, i) => `<tr><td>${esc(x.map)}${i === 0 ? ' <span class="dim">(the moved map)</span>' : ''}</td><td class="${x.match >= 55 ? 'ok' : x.match >= 40 ? 'warn' : 'bad'}">${x.match.toFixed(0)} %</td></tr>`).join('') + '</table>' + (c.seamDonor ? `<div class="row"><button class="primary" data-act="seambuild">Take the walls from ${esc(c.seamDonor)} and prove it</button></div>` : '<p class="bad">No version fits this stretch better than the moved map. It needs a rescan in RoboShop.</p>') : ''}
+   ${sm ? `<div class="gkv3"><span></span><span class="h">moved</span><span class="h">repaired</span><span>position jumps</span><span class="bad">${c.proof.jumpsAfter}</span><span class="${sm.jumpsAfter ? 'bad' : 'ok'}">${sm.jumpsAfter}</span><span>laser points on a wall</span><span>${c.proof.fitAfter.toFixed(0)} %</span><span>${sm.fitAfter.toFixed(0)} %</span><span>checks</span><span></span><span class="${sm.checksOk ? 'ok' : 'bad'}">${sm.checksOk ? 'all pass' : 'NOT all pass'}</span></div><span class="dim">File: ${esc(G.cand)}.smap</span>` : ''}</div>`;
+}
+async function gSeamFind() {
+  const c = G.pc; c.seam = null;
+  const src = await gRun('box_sources', { box: c.seamBox, map: c.moved }); if (!src) return;
+  const vers = src.data.versions.filter(v => !v.same && !v.sameAs && v.walls > 0 && v.name !== G.cand).slice(0, 4).map(v => v.name);
+  if (!vers.length) { c.seamFits = [{ map: c.moved, match: 0 }]; c.seamDonor = ''; return gRender(); }
+  const e = await gRun('box_evidence', { box: c.seamBox, drives: [c.drive], maps: [c.moved, ...vers] }); if (!e) return;
+  c.seamFits = e.data.fits; c.seamDonor = e.data.bestOther || ''; out('walls for the seam', e.summary); gRender(); gSave();
+}
+async function gSeamBuild() {
+  const c = G.pc, b = c.seamBox, name = G.candName + '_b';
+  const r = await gRun('build_merge_box', { base: c.moved, donor: c.seamDonor, name, x0: b[0], y0: b[1], x1: b[2], y1: b[3] }); if (!r) return;
+  G.cand = r.data.candidate; G.candMd5 = (r.summary.match(/md5 ([0-9a-f]{32})/) || [])[1] || ''; await refresh();
+  const rp = await gRun('replay', { drive: c.drive, map: G.cand }); if (!rp) return;
+  c.seam = { checksOk: /RESULT: ALL CHECKS PASS/.test(r.summary), jumpsAfter: bigJumps(rp.data), fitAfter: (rp.summary.match(/average wall match (\d+)/) || [0, 0])[1] * 1 };
+  out('build ' + G.cand, r.summary + '\n\n' + rp.summary); gRender(); gSave(); await showMap(G.cand); gOverlay();
+}
+const bigJumps = d => (d.stretches || []).filter(s => s.Step >= 0.5 && !s.Ambiguous && !s.TrackBreak).length;
+async function gPieces() {
+  const c = G.pc; c.drive = $('#gPcDrive').value; c.turn = null; c.proof = null;
+  const rp = await gRun('replay', { drive: c.drive, map: G.map }); if (!rp) return;
+  S.gRows = rp.data.rows.map(r => ({ i: r.i, x: r.x, y: r.y })); c.jumpsBefore = bigJumps(rp.data); c.fitBefore = (rp.summary.match(/average wall match (\d+)/) || [0, 0])[1] * 1;
+  const r = await gRun('find_pieces', { drive: c.drive, map: G.map }); if (!r) return;
+  c.pieces = r.data || []; out('rigid pieces', r.summary);
+  // first guess: the piece behind the largest seam is the misplaced one; everything before that seam is right
+  let k = 0; c.pieces.forEach((p, i) => { if (i && p.stepAtSeam > (c.pieces[k].stepAtSeam || 0)) k = i; });
+  c.move = k ? [k] : []; c.ref = k ? c.pieces.map((p, i) => i).filter(i => i < k) : [];
+  gRender(); gSave();
+}
+async function gMeasure() {
+  const c = G.pc; c.move = $$('.gPcMove:checked').map(x => +x.value); c.ref = $$('.gPcRef:checked').map(x => +x.value);
+  if (!c.move.length || !c.ref.length) return out('guided', 'Tick at least one piece to move and one piece that is right.');
+  if (c.move.some(i => c.ref.includes(i))) return out('guided', 'A piece cannot be both moved and right.');
+  const r = await gRun('measure_turn', { drive: c.drive, pieceMap: G.map, pieceRanges: c.move.map(i => rangeOf(c.pieces[i])), refRanges: c.ref.map(i => rangeOf(c.pieces[i])), stations: [] }); if (!r) return;
+  c.turn = { th: r.data.th, tx: r.data.tx, ty: r.data.ty, rotDeg: r.data.rotDeg, spreadDeg: r.data.spreadDeg }; out('measure turn', r.summary); gRender(); gSave();
+}
+async function gPieceBuild() {
+  const c = G.pc; c.anchor = $('#gPcAnchor').value;
+  const r = await gRun('build_move_region', { base: G.map, name: G.candName, th: c.turn.th, tx: c.turn.tx, ty: c.turn.ty, region: c.region, anchor: c.anchor || undefined }); if (!r) return;
+  G.cand = r.data.candidate; G.candMd5 = (r.summary.match(/md5 ([0-9a-f]{32})/) || [])[1] || ''; out('build ' + G.cand, r.summary); await refresh();
+  const rp = await gRun('replay', { drive: c.drive, map: G.cand }); if (!rp) return;
+  c.moved = G.cand; c.seam = null; c.seamFits = null; c.seamDonor = '';
+  c.afterJumps = (rp.data.stretches || []).filter(x => x.Step >= 0.5 && !x.Ambiguous && !x.TrackBreak).map(x => ({ step: x.Step, near: x.Near, x: x.X, y: x.Y }));
+  c.seamBox = c.afterJumps.length ? [Math.min(...c.afterJumps.map(j => j.x)) - 7, Math.min(...c.afterJumps.map(j => j.y)) - 6, Math.max(...c.afterJumps.map(j => j.x)) + 7, Math.max(...c.afterJumps.map(j => j.y)) + 6].map(v => +v.toFixed(1)) : null;
+  c.proof = { checksOk: /RESULT: ALL CHECKS PASS/.test(r.summary), jumpsBefore: c.jumpsBefore, jumpsAfter: bigJumps(rp.data), fitBefore: c.fitBefore, fitAfter: (rp.summary.match(/average wall match (\d+)/) || [0, 0])[1] * 1 };
+  out('build ' + G.cand, r.summary + '\n\n' + rp.summary); gRender(); gSave(); await showMap(G.cand); gOverlay();
 }
 // ---- 7
 function gS7() {
@@ -180,15 +281,24 @@ async function gRun(tool, args) {
 $('#tab-guided').addEventListener('click', async ev => {
   const t = ev.target.closest('[data-act],[data-hours],[data-fix]'); if (!t || t.disabled) return;
   if (t.dataset.hours !== undefined) { G.hours = +t.dataset.hours; G.robot = $('#gRobot').value.trim(); G.from = $('#gFrom').value; G.to = $('#gTo').value; return gRender(); }
-  if (t.dataset.fix) { G.fix = t.dataset.fix; G.candName = $('#gName').value.trim(); return gRender(); }
+  if (t.dataset.fix) { G.fix = t.dataset.fix; G.candName = $('#gName').value.trim(); G.proof = null; return gRender(); }
   switch (t.dataset.act) {
     case 'back': return gGo(G.step - 1);
-    case 'next': if (G.step === 4) { G.candName = $('#gName').value.trim(); if (!G.candName) return out('guided', 'Give the new map file a name.'); G.proof = null; } return gGo(G.step + 1);
+    case 'next': if (G.step === 4) { G.candName = $('#gName').value.trim(); if (!G.candName) return out('guided', 'Give the new map file a name.'); G.proof = null; if (G.pc) G.pc.proof = null; } return gGo(G.step + 1);
     case 'tofix': return gGo(4);
     case 'draw': if (!S.A) return out('guided', 'Choose a map first.'); S.draw.box = null; setMode('box'); toast('drag a box on the map'); gWaitBox(); return;
     case 'site': return $('#histSite').click();
     case 'find': return gFind();
-    case 'rec': return recordDlg($('#gRecRobot').value);
+    case 'rec': G.recRobot = $('#gRecRobot').value; return recordDlg(G.recRobot);
+    case 'sources': await refresh(); return gSources();
+    case 'arm': { G.recRobot = $('#gRecRobot').value; const nm = G.recRobot.replace(/[^A-Za-z0-9_-]/g, '') + '_box_' + stamp(); const r = await gRun('record_arm', { robot: G.recRobot, name: nm, box: G.box }); if (!r) return; out('armed recording', r.summary); G.armed = 'Armed for ' + G.recRobot + ': it is recorded when it drives through the box. Keep this window open.'; gRender(); pollRec(); gArmWatch(); return; }
+    case 'pieces': return gPieces();
+    case 'measure': return gMeasure();
+    case 'region': if (!S.A) return; G.pc.anchor = $('#gPcAnchor').value; $('#polyBtn').click(); gWaitPoly(); return;
+    case 'pbuild': return gPieceBuild();
+    case 'seamfind': return gSeamFind();
+    case 'seambuild': return gSeamBuild();
+    case 'seambox': if (!S.A) return; S.draw.box = null; setMode('box'); toast('drag a box around the stretch'); { const t = setInterval(() => { if (S.draw.mode !== 'box') { clearInterval(t); const b = S.draw.box; if (b) { G.pc.seamBox = [Math.min(b[0], b[2]), Math.min(b[1], b[3]), Math.max(b[0], b[2]), Math.max(b[1], b[3])].map(v => +v.toFixed(2)); G.pc.seamFits = null; G.pc.seam = null; S.draw.box = null; gRender(); } } }, 200); } return;
     case 'evidence': return gEvidence();
     case 'build': return gBuild();
     case 'trialmap': { G.trialRobot = $('#gTrialRobot').value; const r = await gRun('robot_status', { robot: G.trialRobot }); if (!r) return; out('robot status', r.summary); G.trialMapOk = !!G.candMd5 && r.summary.includes(G.candMd5); gRender(); return gSave(); }
@@ -210,6 +320,12 @@ async function gAuto(q) {
   gRender(); await gFind();
   const want = +(q.get('gstep') || 2);
   if (want >= 3 && G.report) { gGo(2); }
-  if (want >= 4 && G.report) { gGo(3); if (q.get('gdrives')) { G.drives = q.get('gdrives').split(','); G.vers = (q.get('gvers') || '').split(',').filter(Boolean); gRender(); await gEvidence(); } }
+  if (want >= 4 && G.report) { G.src = { loading: true }; gGo(3); await gSources(); if (q.get('gdrives')) { G.drives = q.get('gdrives').split(','); if (q.get('gvers')) G.vers = q.get('gvers').split(','); gRender(); await gEvidence(); } }
   if (want >= 5 && G.ev) gGo(4);
+  window.__gReady = true;
 }
+
+// the region for the piece move is drawn with the polygon tool
+function gWaitPoly() { toast('click the corners around the whole piece; double-click to finish'); const t = setInterval(() => { if (S.draw.mode !== 'poly') { clearInterval(t); if (S.draw.poly.length >= 3) { G.pc.region = S.draw.poly.map(q => [q[0], q[1]]); G.pc.proof = null; S.draw.poly = []; $('#region').value = ''; } gRender(); gSave(); } }, 200); }
+// an armed recording: say what it is doing, and refresh the list when it has finished
+function gArmWatch() { const t = setInterval(async () => { let d; try { d = (await run('record_status', {}, true)).data; } catch (e) { return; } if (!G) return clearInterval(t); if (d.phase) G.armed = d.robot + ': ' + d.phase + (d.running ? ' (' + d.stats.samples + ' samples)' : ''); if (!d.running) { clearInterval(t); await refresh(); if (G.step === 3) gSources(); } else if (G.step === 3 && !gBusy) { const el0 = document.querySelector('#tab-guided p.warn'); if (el0) el0.textContent = G.armed; } }, 3000); }

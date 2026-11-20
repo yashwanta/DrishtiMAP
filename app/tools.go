@@ -829,6 +829,7 @@ type recording struct {
 	stats       seer.RecStats
 	err         error
 	started     time.Time
+	phase       string // for an armed recording: waiting, recording, done
 }
 
 func (a *App) recStart(robot, name string, minutes int) (*Result, error) {
@@ -904,17 +905,20 @@ func (a *App) recStatus(stop bool) (*Result, error) {
 	default:
 	}
 	a.mu.Lock()
-	s := r.stats
+	s, phase := r.stats, r.phase
 	a.mu.Unlock()
 	state := "running"
 	if !running {
 		state = "stopped"
 	}
 	txt := fmt.Sprintf("recording %q on %s: %s, %d samples, %d failed reads, last %s; robot at (%.2f, %.2f) confidence %.2f %s", r.name, r.robot, state, s.Samples, s.Failed, s.Last, s.X, s.Y, s.Conf, s.Station)
+	if phase != "" {
+		txt = phase + "\n" + txt
+	}
 	if r.err != nil {
 		txt += "\nerror: " + r.err.Error()
 	}
-	return &Result{Summary: txt, Data: map[string]any{"running": running, "drive": r.name, "robot": r.robot, "stats": s, "minutes": time.Since(r.started).Minutes()}}, nil
+	return &Result{Summary: txt, Data: map[string]any{"phase": phase, "running": running, "drive": r.name, "robot": r.robot, "stats": s, "minutes": time.Since(r.started).Minutes()}}, nil
 }
 
 // Shutdown stops a running recording cleanly.

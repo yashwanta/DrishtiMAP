@@ -1,5 +1,5 @@
 // Page script for tests\ui.js: drives the guided steps from Fix options through Build to Trial.
-//   node tests\ui.js <address> shot.png "map=<map>&gbox=x0,y0,x1,y1&gfrom=..&gto=..&gstep=5&gdrives=<recording>&gvers=<other maps>" @tests\guided_flow.js
+//   node tests\ui.js <address> shot.png "map=<map>&gbox=x0,y0,x1,y1&gfrom=..&gto=..&gstep=5&gdrives=<recording>" @tests\guided_flow.js
 // It reports through window.__done. A box fix that would put a wall on a path must stop at Build.
 window.__run = (async () => {
   const w = ms => new Promise(r => setTimeout(r, ms));
