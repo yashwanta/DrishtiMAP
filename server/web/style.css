@@ -195,3 +195,6 @@ body.helpwin #gSteps{display:none}
 #tab-guided select,#tab-guided input[type=text],#tab-guided input:not([type]){width:100%}
 #tab-guided .row select{width:auto;flex:1}
 #tab-guided ul.why{list-style:disc}
+
+#tab-guided .gticks{display:grid;grid-template-columns:repeat(4,1fr);gap:2px 8px;margin:4px 0 6px}
+#tab-guided .gticks label{display:flex;gap:5px;align-items:center;white-space:nowrap}

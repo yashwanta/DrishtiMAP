@@ -108,10 +108,12 @@ function gS4() {
   <div class="gcard"><b>A · Recordings that drive through this box</b>
    ${!src ? '<p class="dim">Looking at the recordings …</p>' : cover.length ? cover.map(d => `<label class="row"><input type="checkbox" class="gDrive" value="${esc(d.name)}"${(G.drives ? G.drives.includes(d.name) : true) ? ' checked' : ''}><span>${esc(d.name)}<br><small class="dim">${d.passes} pass${d.passes > 1 ? 'es' : ''}${d.dir ? ', heading ' + esc(d.dir) : ''}, lowest confidence ${d.min.toFixed(2)}, ${esc(d.when)}</small></span></label>`).join('') : '<p class="bad">No recording covers this box yet.</p>'}
    ${rest ? `<span class="dim">${rest} other recording${rest > 1 ? 's do' : ' does'} not drive through the box and cannot be used here.</span>` : ''}
-   <p><b>Get a recording:</b> choose a robot whose route goes through the box${R().patterns && /heading (north|south|east|west)/.test(R().patterns.join(' ')) ? ', heading <b>' + R().patterns.join(' ').match(/heading (north|south|east|west)/)[1] + '</b> (that is the direction with the trouble)' : ''}.</p>
-   <div class="row"><select id="gRecRobot">${robots}</select><button class="primary" data-act="arm" title="Waits until this robot comes near the box, records while it is there, and stops by itself">Record it when it drives through</button></div>
-   <div class="row"><button data-act="rec">Record now …</button><button data-act="sources">Refresh the list</button></div>
-   ${G.armed ? `<p class="warn">${esc(G.armed)}</p>` : ''}
+   <p><b>Get a recording:</b> let the program watch the robots and record whichever drives through the box${R().patterns && /heading (north|south|east|west)/.test(R().patterns.join(' ')) ? '. A pass heading <b>' + R().patterns.join(' ').match(/heading (north|south|east|west)/)[1] + '</b> is the one to wait for: that is the direction with the trouble' : ''}.</p>
+   <div class="row"><label class="row"><input type="checkbox" id="gArmAll" checked><b>all robots</b></label><span class="dim">or tick the ones to watch:</span></div>
+   <div class="gticks">${S.ws.robots.map(r => `<label><input type="checkbox" class="gArmRobot" value="${esc(r.name)}" checked>${esc(r.name)}</label>`).join('')}</div>
+   <div class="row"><button class="primary" data-act="armall" title="Watches the ticked robots. Each one is recorded the first time it comes near the box, and its recording stops by itself">Record them when they drive through</button>${G.arming ? '<button data-act="armstop">Stop watching</button>' : ''}</div>
+   ${G.armRows ? '<table class="gt">' + G.armRows.map(r => `<tr><td>${esc(r.robot)}</td><td class="${r.entered ? 'ok' : r.done ? 'dim' : /recording/.test(r.phase) ? 'warn' : ''}">${esc(r.phase)}</td><td>${r.samples ? r.samples + ' samples' : ''}</td></tr>`).join('') + '</table><span class="dim">' + (G.arming ? 'Watching. Keep this window open; you can work in the other tabs meanwhile.' : 'Finished. Recordings that drove through the box are in the list above.') + '</span>' : ''}
+   <div class="row"><select id="gRecRobot">${robots}</select><button data-act="rec">Record one now …</button><button data-act="sources">Refresh the list</button></div>
    <span class="dim">This only reads from the robot. The program never sends a robot anywhere: it is sent by the fleet manager as usual.</span></div>
   <div class="gcard"><b>B · Compare what the robots see with the map</b>
    <p class="dim">Puts the recorded lasers on the map inside the box. It also tries earlier versions of the map that have different walls here: if one of them matches the lasers better, its walls are the fix.</p>
@@ -325,6 +327,8 @@ $('#tab-guided').addEventListener('click', async ev => {
     case 'scans': return gScans();
     case 'scanev': return gScanEvidence();
     case 'hlogin': return gHealthLogin();
+    case 'armall': { const names = $$('.gArmRobot:checked').map(c => c.value); if (!names.length) return out('guided', 'Tick at least one robot.'); const r = await gRun('record_arm_all', { robots: names, box: G.box }); if (!r) return; out('watching robots', r.summary); G.arming = true; G.armRows = names.map(n => ({ robot: n, phase: 'waiting for it to come near the box', samples: 0 })); gRender(); gArmAllWatch(); return; }
+    case 'armstop': { const r = await gRun('record_arm_stop', {}); if (!r) return; out('watching robots', r.summary); G.arming = false; G.armRows = r.data.rows; await refresh(); return gSources(); }
     case 'pieces': return gPieces();
     case 'measure': return gMeasure();
     case 'region': if (!S.A) return; G.pc.anchor = $('#gPcAnchor').value; $('#polyBtn').click(); gWaitPoly(); return;
@@ -362,3 +366,10 @@ async function gAuto(q) {
 function gWaitPoly() { toast('click the corners around the whole piece; double-click to finish'); const t = setInterval(() => { if (S.draw.mode !== 'poly') { clearInterval(t); if (S.draw.poly.length >= 3) { G.pc.region = S.draw.poly.map(q => [q[0], q[1]]); G.pc.proof = null; S.draw.poly = []; $('#region').value = ''; } gRender(); gSave(); } }, 200); }
 // an armed recording: say what it is doing, and refresh the list when it has finished
 function gArmWatch() { const t = setInterval(async () => { let d; try { d = (await run('record_status', {}, true)).data; } catch (e) { return; } if (!G) return clearInterval(t); if (d.phase) G.armed = d.robot + ': ' + d.phase + (d.running ? ' (' + d.stats.samples + ' samples)' : ''); if (!d.running) { clearInterval(t); await refresh(); if (G.step === 3) gSources(); } else if (G.step === 3 && !gBusy) { const el0 = document.querySelector('#tab-guided p.warn'); if (el0) el0.textContent = G.armed; } }, 3000); }
+
+// watching several robots for the box
+$('#tab-guided').addEventListener('change', ev => { if (ev.target.id === 'gArmAll') for (const c of $$('.gArmRobot')) c.checked = ev.target.checked; else if (ev.target.classList.contains('gArmRobot')) { const a = $('#gArmAll'); if (a) a.checked = $$('.gArmRobot').every(c => c.checked); } });
+let gArmT = 0;
+function gArmAllWatch() { clearInterval(gArmT); gArmT = setInterval(async () => { if (!G) return clearInterval(gArmT); let d; try { d = (await run('record_arm_status', {}, true)).data; } catch (e) { return; } const was = JSON.stringify(G.armRows); G.armRows = d.rows; G.arming = d.running; if (!d.running) { clearInterval(gArmT); await refresh(); if (G.step === 3) gSources(); return; } if (G.step === 3 && !gBusy && JSON.stringify(d.rows) !== was) { const done = d.rows.filter(r => r.done).length; gRender(); if (done) refresh(); } }, 4000); }
+// a watch that is still running when the page is opened again is picked up
+(async () => { try { const d = (await run('record_arm_status', {}, true)).data; if (d.running && G) { G.arming = true; G.armRows = d.rows; gArmAllWatch(); if (G.step === 3) gRender(); } } catch (e) { } })();

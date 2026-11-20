@@ -8,6 +8,15 @@ To publish a version: change `Version` in `app\app.go`, add a section at the top
 `## <version> · <date> · by <your GitHub name>`, commit, then push a tag `v<version>`. GitHub builds the
 exe and publishes the release by itself, with your name and the list of commits on the release page.
 
+## 1.7.0 · 2026-11-20 · by yashwanta
+
+- **Watch several robots for a box.** In the Evidence step, tick the robots (all are ticked to start
+  with) and press **Record them when they drive through**. Each robot is recorded the first time it comes
+  near the box, and its recording stops by itself. You do not have to know which robot will come by.
+  The step shows what each robot is doing, and the watch can be stopped at any time; recordings made so
+  far are kept.
+- New tools for the assistant: `record_arm_all`, `record_arm_status`, `record_arm_stop`.
+
 ## 1.6.4 · 2026-11-20 · by yashwanta
 
 - When the AMR Health server is restarting, the Evidence step now says so and asks to try again in a

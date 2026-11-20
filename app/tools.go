@@ -924,6 +924,13 @@ func (a *App) recStatus(stop bool) (*Result, error) {
 // Shutdown stops a running recording cleanly.
 func (a *App) Shutdown() {
 	a.mu.Lock()
+	arms := a.arms
+	a.mu.Unlock()
+	if arms != nil {
+		arms.cancel() // robots being watched for a box
+		<-arms.done
+	}
+	a.mu.Lock()
 	r := a.rec
 	a.mu.Unlock()
 	if r != nil {
