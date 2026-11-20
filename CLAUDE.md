@@ -84,6 +84,7 @@ version or has no changelog section. The exe and zip appear under Releases a few
 - **Never `taskkill /IM DrishtiMap.exe`**: it also closes the user's open app. Build test copies under
   another name (`DrishtiMap_new.exe`) and kill only that name.
 - **Fleet history lessons:** a robot turning on the spot is normal (only flag a turn when confidence collapses); unchanged data then a leap of metres is a connection stall, not a position jump; a parked robot looks the same as no data; robot clocks are wrong, use the fleet manager line time. Real-event regression: `workspace\history\trip_amr08_20261120.tsv` (`go test ./fleet` with DRISHTI_WS).
+- **The user works in `workspace\` while Claude tests.** Page tests that walk the Guided steps save a case: run them on a throw-away workspace, and NEVER delete `workspace\cases` (a clean-up on 2026-11-20 removed a case the user had just made). Remove only files a test itself created, by name.
 - `--workspace` is for one run only and does not change the saved workspace.
 - The test `tests\e2e.js robot` step replaces the robot list for a moment and restores it.
 - Plain `msedge --headless --screenshot` hangs here; `tests\ui.js` drives Edge over the DevTools port.

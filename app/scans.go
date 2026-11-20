@@ -117,6 +117,17 @@ func (a *App) scanList(c *Ctx, box *[4]float64, from, to time.Time, robot string
 	return out, nil
 }
 
+// scanPlace says where a scan was taken, in words.
+func scanPlace(s fleet.Scan) string {
+	if s.X == nil || s.Y == nil {
+		return "an unknown position"
+	}
+	if s.Station != "" {
+		return fmt.Sprintf("%s (%.1f, %.1f)", s.Station, *s.X, *s.Y)
+	}
+	return fmt.Sprintf("(%.1f, %.1f)", *s.X, *s.Y)
+}
+
 func scanUsable(s fleet.Scan) bool { return s.HasPoints && s.X != nil && s.Y != nil && s.Angle != nil }
 
 func window(hours float64, fromS, toS string) (time.Time, time.Time, error) {
@@ -243,6 +254,8 @@ func (a *App) scanEvidence(c *Ctx, box [4]float64, mapName string, from, to time
 	}
 	var ok []placed
 	rejected := 0
+	bestRejected, rejPts, rejConf := 0.0, 0, -1.0
+	weak := 0
 	for i, s := range use {
 		c.progress(i, len(use), fmt.Sprintf("placing scan %d of %d on the map", i+1, len(use)))
 		if c.Err() != nil {
@@ -269,8 +282,17 @@ func (a *App) scanEvidence(c *Ctx, box [4]float64, mapName string, from, to time
 		if s.Confidence != nil && *s.Confidence < 0.5 {
 			doubtful++
 		}
-		if match < 40 {
+		moved0 := math.Hypot(fx-*s.X, fy-*s.Y)
+		if match < 40 && match >= 20 && moved0 <= 0.6 {
+			weak++ // placed where the robot said it was; the lasers and the map agree poorly there
+		} else if match < 40 {
 			rejected++
+			if match > bestRejected {
+				bestRejected, rejPts, rejConf = match, len(near), -1
+				if s.Confidence != nil {
+					rejConf = *s.Confidence
+				}
+			}
 			continue
 		}
 		p := placed{s: s, x: fx, y: fy, match: match, moved: math.Hypot(fx-*s.X, fy-*s.Y), cells: map[[2]int]bool{}}
@@ -284,7 +306,7 @@ func (a *App) scanEvidence(c *Ctx, box [4]float64, mapName string, from, to time
 		ok = append(ok, p)
 	}
 	if len(ok) == 0 {
-		return nil, fmt.Errorf("%d stored scan(s) were found near the box, but none could be placed on %s (fewer than 40 %% of the points landed on walls). Either the map is far off there, or the robot's reported position was", len(use), mapName)
+		return nil, fmt.Errorf("%d stored scan(s) were found near the box and read (%d laser points within 15 m in the best one), but none fits %s well enough to be placed: at best %.0f %% of the points land on walls, and 40 %% is needed. The robot itself reported confidence %.2f there, so the lasers and the map really do not agree at that spot: something stands there that is not in the map, or the walls there are not what was scanned. Open the scan viewer (Advanced, LiDAR, Live from robot) to see it", len(use), rejPts, mapName, bestRejected, rejConf)
 	}
 	// what the scans agree on inside the box
 	hits := map[[2]int]int{}
@@ -371,6 +393,9 @@ func (a *App) scanEvidence(c *Ctx, box [4]float64, mapName string, from, to time
 	if rejected > 0 {
 		fmt.Fprintf(&b, ", %d could not be placed", rejected)
 	}
+	if weak > 0 {
+		fmt.Fprintf(&b, "; %d of the placed ones fit poorly (20 to 40 %% of points on walls) and were left where the robot said it was", weak)
+	}
 	if noPoints > 0 {
 		fmt.Fprintf(&b, ", %d without points or position", noPoints)
 	}
@@ -400,6 +425,9 @@ func (a *App) scanEvidence(c *Ctx, box [4]float64, mapName string, from, to time
 		fmt.Fprintf(&b, "  in few of them                          %5d   something passing through or put down for a while\n", len(sometimes))
 	} else {
 		b.WriteString("  With one scan a permanent object and a passing one look the same.\n")
+	}
+	if weak > 0 {
+		b.WriteString("\nWhere a scan fits poorly, the robot's own position may be off as well, so the colours on the map show a disagreement, not exactly which wall is wrong. Look at them on the map: red = map wall the lasers do not see, blue and pink = seen but not in the map.\n")
 	}
 	if len(ok) < 5 {
 		b.WriteString("\nOnly a few scans so far: read this as a first look, not as a finding.\n")
@@ -437,9 +465,28 @@ func init() {
 				b, _ := box4(p.Box)
 				box = &b
 			}
-			list, err := c.App.scanList(c, box, from, to, strings.TrimSpace(p.Robot))
+			all, err := c.App.scanList(c, nil, from, to, strings.TrimSpace(p.Robot))
 			if err != nil {
 				return nil, err
+			}
+			list := all
+			nearest, nearestD := -1, math.Inf(1)
+			if box != nil {
+				list = nil
+				for i, s := range all {
+					if s.X == nil || s.Y == nil {
+						continue
+					}
+					dx := math.Max(0, math.Max(box[0]-*s.X, *s.X-box[2]))
+					dy := math.Max(0, math.Max(box[1]-*s.Y, *s.Y-box[3]))
+					d := math.Hypot(dx, dy)
+					if d <= armMargin {
+						list = append(list, s)
+					}
+					if d < nearestD {
+						nearest, nearestD = i, d
+					}
+				}
 			}
 			type row struct {
 				Robot  string `json:"robot"`
@@ -480,7 +527,11 @@ func init() {
 				rows = append(rows, *r)
 				fmt.Fprintf(&b, "  %-9s %4d scan(s), %d with points and a position, %d taken at confidence below 0.5, newest %s\n", r.Robot, r.Scans, r.Usable, r.Low, r.Newest)
 			}
-			if len(list) == 0 {
+			if len(list) == 0 && box != nil && len(all) > 0 {
+				s := all[nearest]
+				fmt.Fprintf(&b, "  none near this box. AMR Health holds %d scan(s) in that time, all taken elsewhere; the nearest was %.0f m from the box (%s at %s, %s).\n", len(all), nearestD, s.AMR, scanPlace(s), s.CapturedAt.Local().Format("02 Jan 15:04"))
+				b.WriteString("  A stored scan helps here only if a robot was within about 12 m of the box when it was taken.\n")
+			} else if len(list) == 0 {
 				b.WriteString("  none. Scans are stored only for the robots named in the AMR Health settings, at their sample times or when they have a problem.\n")
 			} else {
 				var rs []string
@@ -490,7 +541,37 @@ func init() {
 				sort.Strings(rs)
 				b.WriteString("  why they were taken: " + strings.Join(rs, ", ") + "\n")
 			}
-			return &Result{Summary: b.String(), Data: map[string]any{"robots": rows, "total": len(list)}}, nil
+			// where the newest ones were taken
+			type at struct {
+				Robot  string  `json:"robot"`
+				When   string  `json:"when"`
+				Reason string  `json:"reason"`
+				Conf   float64 `json:"conf"`
+				X      float64 `json:"x"`
+				Y      float64 `json:"y"`
+				Place  string  `json:"place"`
+			}
+			var places []at
+			if len(all) > 0 {
+				b.WriteString("\nWHERE THE NEWEST SCANS WERE TAKEN (anywhere in the plant)\n")
+			}
+			for i, s := range all {
+				if i == 15 {
+					fmt.Fprintf(&b, "  ... %d more\n", len(all)-i)
+					break
+				}
+				w := at{Robot: s.AMR, When: s.CapturedAt.Local().Format("02 Jan 15:04"), Reason: s.Reason, Place: scanPlace(s), Conf: -1}
+				if s.Confidence != nil {
+					w.Conf = *s.Confidence
+				}
+				if s.X != nil && s.Y != nil {
+					w.X, w.Y = *s.X, *s.Y
+				}
+				places = append(places, w)
+				fmt.Fprintf(&b, "  %s  %-8s %-15s confidence %.2f  at %s\n", w.When, w.Robot, w.Reason, w.Conf, w.Place)
+			}
+			total := len(all)
+			return &Result{Summary: b.String(), Data: map[string]any{"robots": rows, "total": len(list), "stored": total, "where": places, "nearest": nearestD}}, nil
 		}})
 	reg(&Tool{Name: "scan_evidence", Heavy: true, Desc: "READ-ONLY: take the laser scans that AMR Health stored near a box, place each one on a map, and report: each robot's share of laser points on walls (a robot clearly below the others has a scanner problem), which walls of the map in the box were seen, and what the lasers see that the map does not have (in most scans = permanent, in few = passing through). Works without anyone recording. A single scan cannot show a position jump or a misplaced piece: that needs a recorded drive (box_evidence, replay).",
 		Params: obj(pMap+`,"box":{"type":"array","items":{"type":"number"},"minItems":4,"maxItems":4},"hours":{"type":"number","description":"how many hours back (default 48)"},"from":{"type":"string"},"to":{"type":"string"},"robots":{"type":"array","items":{"type":"string"},"description":"optional: only these robots"}`, "map", "box"),

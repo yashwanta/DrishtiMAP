@@ -8,6 +8,14 @@ To publish a version: change `Version` in `app\app.go`, add a section at the top
 `## <version> · <date> · by <your GitHub name>`, commit, then push a tag `v<version>`. GitHub builds the
 exe and publishes the release by itself, with your name and the list of commits on the release page.
 
+## 1.6.1 · 2026-11-20 · by yashwanta
+
+- Stored scans: when none was taken near the box, the Evidence step now says how many scans AMR Health
+  holds, where the newest were taken, and how far the nearest one is from the box, instead of only "none".
+- Stored scans that fit the map poorly (20 to 40 % of points on walls) are no longer dropped when they stay
+  where the robot said it was: a poor fit is the very thing to look at. They are counted and marked.
+- When no stored scan can be placed, the message gives the best fit found and the robot's own confidence.
+
 ## 1.6.0 · 2026-11-20 · by yashwanta
 
 - **Laser scans recorded automatically are read from the apps server.** When the workspace names an
